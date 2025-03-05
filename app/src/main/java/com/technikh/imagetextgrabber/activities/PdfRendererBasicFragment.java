@@ -144,16 +144,6 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
         markerDao=db.getHighlightsDao();
         imagesDao=db.getImagesDao();
 
-
-
-
-
-
-
-
-
-
-
         android.os.Bundle args = getIntent().getBundleExtra("bundle");
         if(args != null) {
             pdfFileUri = Uri.parse(args.getString("uri", ""));
@@ -365,20 +355,14 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
 
     @Override
     public void onClick(android.view.View view) {
-        switch (view.getId()) {
-            case R.id.previous: {
-                //mImageView.resetOCR();
-                // Move to the previous page
-                showPage(mCurrentPage.getIndex() - 1, null);
-                break;
-            }
-            case R.id.next: {
-                //mImageView.resetOCR();
-                // Move to the next page
-                showPage(mCurrentPage.getIndex() + 1, null);
-                break;
-            }
+        if (view.getId() == R.id.previous) {
+            // Move to the previous page
+            showPage(mCurrentPage.getIndex() - 1, null);
+        } else if (view.getId() == R.id.next) {
+            // Move to the next page
+            showPage(mCurrentPage.getIndex() + 1, null);
         }
+
     }
 
     private class ImagePagerAdapter extends PagerAdapter {

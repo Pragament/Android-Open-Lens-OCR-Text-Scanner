@@ -1,31 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  ~ Copyright (c) 2019. Nikhil Dubbaka from TechNikh.com under GNU AFFERO GENERAL PUBLIC LICENSE
-  ~ Copyright and license notices must be preserved.
-  ~ When a modified version is used to provide a service over a network, the complete source code of the modified version must be made available.
-  -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.MainActivity">
-<!--
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay">
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            app:popupTheme="@style/AppTheme.PopupOverlay" />
-
-    </com.google.android.material.appbar.AppBarLayout> -->
 
     <include layout="@layout/content_main" />
+
+    <!-- Recognized Text EditText -->
+    <EditText
+        android:id="@+id/recognized_text_edit"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:hint="Recognized text will appear here"
+        android:visibility="gone"
+        android:padding="16dp"
+        android:background="#E0E0E0"
+        android:textColor="#000"
+        android:textSize="16sp" />
+
+    <!-- OK Button -->
+    <Button
+        android:id="@+id/ok_button"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:text="OK"
+        android:layout_gravity="top|right"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        android:background="@drawable/rounded_button"
+        android:backgroundTint="#1abc9c"
+        android:textColor="@android:color/white"
+        android:layout_marginRight="10dp"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabPdf"
@@ -35,6 +42,7 @@
         android:layout_marginRight="@dimen/fab_margin"
         android:layout_marginBottom="80dp"
         app:srcCompat="@drawable/ic_picture_as_pdf_black_24dp" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"

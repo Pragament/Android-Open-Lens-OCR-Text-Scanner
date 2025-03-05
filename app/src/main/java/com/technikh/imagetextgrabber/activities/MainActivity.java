@@ -20,8 +20,8 @@ import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.PaintDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Build;
 
@@ -31,17 +31,19 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.mlkit.vision.text.Text;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 import com.technikh.imagetextgrabber.R;
 import com.technikh.imagetextgrabber.models.ImageViewSettingsModel;
 import com.technikh.imagetextgrabber.models.VisionWordModel;
-import com.technikh.imagetextgrabber.room.entity.Highlights;
 import com.technikh.imagetextgrabber.room.entity.Images;
 import com.technikh.imagetextgrabber.widgets.MultiSelectSpinnerWidget;
 import com.technikh.imagetextgrabber.widgets.TouchImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.Handler;
+import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,11 +52,20 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
 import java.util.ArrayList;
+
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
+import android.util.Log;
 
 public class MainActivity extends AppCompatActivity{
 
@@ -95,8 +106,6 @@ public class MainActivity extends AppCompatActivity{
 
 
     }
-
-
 
     @Override
     protected void onCreate(android.os.Bundle savedInstanceState) {
@@ -353,11 +362,12 @@ public class MainActivity extends AppCompatActivity{
 
     }
 
+    //------------------------Updated Code---------------------------------
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
-            currentUri=data.getData().toString();
+            currentUri = data.getData().toString();
             if (requestCode == SELECT_PICTURE) {
                 ViewGroup.LayoutParams lParams = ivImage.getLayoutParams();
                 imageParentLayout.removeView(ivImage);
@@ -365,28 +375,26 @@ public class MainActivity extends AppCompatActivity{
                 ivImage.setLayoutParams(lParams);
                 imageParentLayout.addView(ivImage);
 
-                //ivImage.setImageMatrix(new Matrix());
                 ivImage.setVisibility(android.view.View.VISIBLE);
                 findViewById(R.id.container).setVisibility(android.view.View.GONE);
-                //ImageViewUtils.updateImageViewMatrix(ivImage, ((BitmapDrawable) ivImage.getDrawable()).getBitmap());
-                //ivImage.resetOCR();
 
                 com.bumptech.glide.Glide.with(MainActivity.this)
+                        .asBitmap()
                         .load(data.getData())
-                        .listener(new RequestListener<android.graphics.drawable.Drawable>() {
+                        .listener(new RequestListener<Bitmap>() {
                             @Override
-                            public boolean onLoadFailed(@androidx.annotation.Nullable GlideException e, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, boolean isFirstResource) {
+                            public boolean onLoadFailed(@androidx.annotation.Nullable GlideException e, Object model, com.bumptech.glide.request.target.Target<Bitmap> target, boolean isFirstResource) {
                                 return false;
                             }
 
                             @Override
-                            public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable> target, DataSource dataSource, boolean isFirstResource) {
-
-                                showSavedHighlights(resource);
+                            public boolean onResourceReady(Bitmap resource, Object model, com.bumptech.glide.request.target.Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+                                Drawable drawable = new BitmapDrawable(getResources(), resource);
+                                showSavedHighlights(drawable);
+                                recognizeText(resource);
                                 return false;
                             }
                         })
-
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .into(ivImage);
 
@@ -394,26 +402,86 @@ public class MainActivity extends AppCompatActivity{
 
                 android.os.Bundle bundle = new android.os.Bundle();
                 mFirebaseAnalytics.logEvent("IMAGE_CHANGE", bundle);
-            }
-            else if (requestCode == SELECT_PDF) {
+            } else if (requestCode == SELECT_PDF) {
                 android.os.Bundle bundle = new android.os.Bundle();
                 mFirebaseAnalytics.logEvent("PDF_CHANGE", bundle);
-                ivImage.setVisibility(android.view.View.GONE);
-                findViewById(R.id.container).setVisibility(android.view.View.VISIBLE);
+                ivImage.setVisibility(android.view.View.VISIBLE);
+                findViewById(R.id.container).setVisibility(android.view.View.GONE);
 
+                try {
+                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(data.getData(), "r");
+                    if (pfd != null) {
+                        PdfRenderer renderer = new PdfRenderer(pfd);
+                        PdfRenderer.Page page = renderer.openPage(0);
 
-                android.os.Bundle args = new android.os.Bundle();
-                args.putString("uri", data.getData().toString());
-                startActivity(new Intent(MainActivity.this,PdfRendererBasicFragment.class)
-                        .putExtra("bundle",args)
-                );
+                        Bitmap bitmap = Bitmap.createBitmap(page.getWidth(), page.getHeight(), Bitmap.Config.ARGB_8888);
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+                        recognizeText(bitmap);
+
+                        
+
+                        // PDF ka preview set karte hain
+                        ivImage.setImageBitmap(bitmap);
+
+                        page.close();
+                        renderer.close();
+                    }
+                } catch (IOException e) {
+                    Toast.makeText(this, "Failed to load PDF", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
 
+    // Text recognition ka method
+    private void recognizeText(Bitmap bitmap) {
+        TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
 
+        InputImage image = InputImage.fromBitmap(bitmap, 0);
 
-    public void showSavedHighlights(android.graphics.drawable.Drawable drawable){
+        recognizer.process(image)
+                .addOnSuccessListener(visionText -> {
+                    if (visionText.getText().isEmpty()) {
+                        Toast.makeText(this, "No text found in image", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    StringBuilder recognizedText = new StringBuilder();
+                    for (Text.TextBlock block : visionText.getTextBlocks()) {
+                        recognizedText.append(block.getText()).append("\n");
+                    }
+                    EditText editText = findViewById(R.id.recognized_text_edit);
+                    editText.setText(recognizedText.toString());
+                    editText.setVisibility(View.VISIBLE);
+
+                    Button okButton = findViewById(R.id.ok_button); // XML me ek button add karo
+                    okButton.setVisibility(View.VISIBLE);
+
+                    Handler handler = new Handler();
+                    Runnable showDialog = () -> {
+                        new AlertDialog.Builder(this)
+                                .setTitle("Recognized Text")
+                                .setMessage(visionText.getText())
+                                .setPositiveButton("OK", (dialog, which) -> {
+                                    dialog.dismiss();
+                                    editText.setVisibility(View.GONE);
+                                    okButton.setVisibility(View.GONE);
+                                })
+                                .show();
+                    };
+
+                    //handler.postDelayed(showDialog, 10000); // 10 second delay
+
+                    okButton.setOnClickListener(v -> {
+                        handler.removeCallbacks(showDialog); // Agar user "OK" dabata hai toh delay hatao
+                        showDialog.run(); // Turant AlertDialog show karo
+                    });
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to recognize text: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    //----------------------------------------------------------------------
+
+    public void showSavedHighlights(Drawable drawable){
         //get last read image
         //...
 
