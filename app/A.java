@@ -1,0 +1,1 @@
+Right-click karo file pe (google-services.json) —> Refactor —> Rename.

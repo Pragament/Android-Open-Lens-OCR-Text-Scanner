@@ -1,11 +1,13 @@
+apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.android.application'
-apply plugin:'kotlin-android-extensions'
+
 android {
-    compileSdkVersion 28
+    namespace "com.technikh.imagetextgrabber"
+    compileSdkVersion 34 // Updated to the latest stable version
     defaultConfig {
         applicationId "com.technikh.imagetextgrabber"
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 34 // Updated to the latest stable version
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         multiDexEnabled true
@@ -19,32 +21,40 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+
+
     }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'androidx.appcompat:appcompat:1.0.0-beta01'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    implementation 'com.google.android.material:material:1.0.0-beta01'
 
-    implementation 'fastily:jwiki:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
-
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test:runner:1.1.0-alpha4'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0-alpha4'
-    implementation 'com.github.bumptech.glide:glide:4.9.0'
+    implementation 'com.github.bumptech.glide:glide:4.15.0' // Updated Glide
     implementation 'com.bogdwellers:pinchtozoom:0.1'
-    implementation 'com.google.firebase:firebase-core:16.0.8'
-    implementation 'com.google.firebase:firebase-ml-vision:19.0.3'
     implementation 'com.sothree.slidinguppanel:library:3.4.0'
 
+    // Firebase dependencies
+    //implementation 'com.google.firebase:firebase-core:21.1.1'
 
-    def room_version = "2.2.6"
+    //----add
+    // ML Kit and Firebase Vision
+    implementation 'com.google.mlkit:text-recognition:16.0.0' // On-device text recognition
+    implementation 'com.google.firebase:firebase-ml-vision:24.0.3' // Agar cloud text recognition chahiye
+    implementation 'com.google.firebase:firebase-analytics:21.5.0' // Optional, agar Firebase use kar rahe ho
 
+    // Room dependencies
+    def room_version = "2.6.1" // Updated Room
     implementation "androidx.room:room-runtime:$room_version"
     annotationProcessor "androidx.room:room-compiler:$room_version"
+
+    // Testing dependencies
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
 
 apply plugin: 'com.google.gms.google-services'
