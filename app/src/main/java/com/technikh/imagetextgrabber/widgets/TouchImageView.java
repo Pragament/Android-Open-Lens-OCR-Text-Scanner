@@ -68,6 +68,8 @@ import static com.technikh.imagetextgrabber.activities.MainActivity.savedRects;
 
 public class TouchImageView extends AppCompatImageView {
 
+    private GestureDetector gestureDetector1;
+
     private com.technikh.imagetextgrabber.room.dao.ImagesDataAccess dao;
 
     public void highlight(final String s){
@@ -512,12 +514,21 @@ public class TouchImageView extends AppCompatImageView {
         });
     }
 
-    private boolean isLongClick(MotionEvent event1, boolean cancelZoomNav) {
-        if (Build.VERSION.SDK_INT >= VERSION_CODES.N) {
-            return (event1.getAction() == MotionEvent.ACTION_DOWN);
-        }else{
-            return (event1.getAction() == MotionEvent.ACTION_MOVE) && !cancelZoomNav;
+    private boolean isLongClick(MotionEvent event, boolean cancelZoomNav) {
+        // Check if the event action is ACTION_DOWN
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            return true;
         }
+
+        // Check if the Android version is less than Nougat (API level 24)
+        // and the event action is ACTION_MOVE and cancelZoomNav is false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N &&
+                event.getAction() == MotionEvent.ACTION_MOVE &&
+                !cancelZoomNav) {
+            return true;
+        }
+
+        return false;
     }
 
     private void sharedConstructing(Context context) {
@@ -606,7 +617,7 @@ public class TouchImageView extends AppCompatImageView {
 
             @Override
             public boolean onTouch(android.view.View view, final MotionEvent event) {
-              //  Log.d(TAG, "onTouch: startCursorPoint "+startCursorPoint.toString()+" endCursorPoint "+endCursorPoint.toString());
+                //  Log.d(TAG, "onTouch: startCursorPoint "+startCursorPoint.toString()+" endCursorPoint "+endCursorPoint.toString());
                 ImageView imageView;
                 Integer pointerId;
                 try {
@@ -636,13 +647,13 @@ public class TouchImageView extends AppCompatImageView {
                             leftRulerPointMode = false;
                             rightRulerPointMode = false;
                             // Update zoomedVisionTextRectangles
-                            if((loriginalImageHeight/loriginalImageWidth) > 1.3) {
+                            if ((loriginalImageHeight / loriginalImageWidth) > 1.3) {
                                 // Zoomed area is depending on aspect ratio of the image and device - portrait or landscape
                                 if (Build.VERSION.SDK_INT >= VERSION_CODES.N) {
                                     zoomedVisionTextRectangles = visionTextRectanglesSimplified.stream().filter(filteredVisionWord -> (isWordWithinVisibleArea(filteredVisionWord))).collect(Collectors.toList());
                                     //Log.d(TAG, "rdfer onTouch: zoomedVisionTextRectangles = visionTextRectanglesSimplified.stream()");
                                 }
-                            }else{
+                            } else {
                                 //Log.d(TAG, "rdfer onTouch: zoomedVisionTextRectangles = visionTextRectanglesSimplified ");
                                 zoomedVisionTextRectangles = visionTextRectanglesSimplified;
                             }
@@ -671,9 +682,9 @@ public class TouchImageView extends AppCompatImageView {
                         }
                         if (false && mode == DRAG) {
                             cancelZoomNav = false;
-                            if(startCursorMode) {
+                            if (startCursorMode) {
                                 startCursorPoint = getTranslatedPoint(event.getX(), event.getY());
-                            }else{
+                            } else {
                                 endCursorPoint = getTranslatedPoint(event.getX(), event.getY());
                             }
                             //clearSelectedText();
@@ -712,40 +723,40 @@ public class TouchImageView extends AppCompatImageView {
                         break;
                     case MotionEvent.ACTION_MOVE:
                         //Log.d(TAG, "ter onTouch: updateTouchState "+updateTouchState);
-                        if(updateTouchState) {
+                        if (updateTouchState) {
                             evaluateTouchState(event, matrix);
                             updateTouchState = false;
                         }
                         //Log.d(TAG, "ter onTouch: ACTION_MOVE mode "+mode+" DRAG "+DRAG);
                         if (mode == DRAG) {
-                           // Log.d(TAG, "ter onTouch: mode == DRAG");
-                            if(!textSelectionInProgress && startCursorMode) {
+                            // Log.d(TAG, "ter onTouch: mode == DRAG");
+                            if (!textSelectionInProgress && startCursorMode) {
                                 selectWordInBetweenCursors(getTranslatedPoint(event.getX(), event.getY()), null, null, null);
-                            }else if(!textSelectionInProgress && endCursorMode) {
+                            } else if (!textSelectionInProgress && endCursorMode) {
                                 selectWordInBetweenCursors(null, getTranslatedPoint(event.getX(), event.getY()), null, null);
-                            }else if(!textSelectionInProgress && leftRulerPointMode) {
+                            } else if (!textSelectionInProgress && leftRulerPointMode) {
                                 selectWordInBetweenCursors(null, null, getTranslatedPoint(event.getX(), event.getY()), null);
-                            }else if(!textSelectionInProgress && rightRulerPointMode) {
+                            } else if (!textSelectionInProgress && rightRulerPointMode) {
                                 selectWordInBetweenCursors(null, null, null, getTranslatedPoint(event.getX(), event.getY()));
                             }
 
                             //Log.d(TAG, "ter onTouch: startPoints "+startPoints.toString());
-                            if(checkTouchPoint(startCursorPoint, event.getX(), event.getY(), -20, -20)){
-                               // Log.d(TAG, "ter onTouch: match startCursorPoint");
+                            if (checkTouchPoint(startCursorPoint, event.getX(), event.getY(), -20, -20)) {
+                                // Log.d(TAG, "ter onTouch: match startCursorPoint");
                                 cancelZoomNav = true;
                                 startCursorMode = true;
-                            }else if(checkTouchPoint(endCursorPoint, event.getX(), event.getY(), 20, 20)){
+                            } else if (checkTouchPoint(endCursorPoint, event.getX(), event.getY(), 20, 20)) {
                                 cancelZoomNav = true;
                                 endCursorMode = true;
-                            }else if(checkTouchPoint(leftMarginRulerPoint, event.getX(), event.getY(), 0,0)){
-                              //  Log.d(TAG, "ter onTouch: match startCursorPoint");
+                            } else if (checkTouchPoint(leftMarginRulerPoint, event.getX(), event.getY(), 0, 0)) {
+                                //  Log.d(TAG, "ter onTouch: match startCursorPoint");
                                 cancelZoomNav = true;
                                 leftRulerPointMode = true;
-                            }else if(checkTouchPoint(rightMarginRulerPoint, event.getX(), event.getY(), 0,0)){
+                            } else if (checkTouchPoint(rightMarginRulerPoint, event.getX(), event.getY(), 0, 0)) {
                                 cancelZoomNav = true;
                                 rightRulerPointMode = true;
-                            }else{
-                               // Log.d(TAG, "ter onTouch: fail startCursorPoint startCursorPoint "+startCursorPoint.toString()+" x "+event.getX()+" y "+event.getY());
+                            } else {
+                                // Log.d(TAG, "ter onTouch: fail startCursorPoint startCursorPoint "+startCursorPoint.toString()+" x "+event.getX()+" y "+event.getY());
                             }
                         }
                         break;
@@ -790,102 +801,133 @@ public class TouchImageView extends AppCompatImageView {
                     lscaledImageHeight = loriginalImageHeight;
                 }
                 widthZoomFactor = lscaledImageWidth / loriginalImageWidth;
-                if(widthZoomFactor == 1){
-                    zoomedOffsetX = (int) (-1*(Math.abs(transX)) / widthZoomFactor);
-                }else {
+                if (widthZoomFactor == 1) {
+                    zoomedOffsetX = (int) (-1 * (Math.abs(transX)) / widthZoomFactor);
+                } else {
                     zoomedOffsetX = (int) ((Math.abs(transX)) / widthZoomFactor);
                 }
                 heightZoomFactor = lscaledImageHeight / loriginalImageHeight;
-                if(heightZoomFactor == 1){
+                if (heightZoomFactor == 1) {
                     //zoomedOffsetY = 0;
                     // If there is a Toolbar widget at the top, that will add to offset
-                    zoomedOffsetY = (int) (1*(Math.abs(transY)) / heightZoomFactor);
-                }else {
+                    zoomedOffsetY = (int) (1 * (Math.abs(transY)) / heightZoomFactor);
+                } else {
                     zoomedOffsetY = (int) ((Math.abs(transY)) / heightZoomFactor);
                 }
-               // Log.d(TAG, "ghy onTouch: onTouch event1.getAction() "+event.getAction());
+                // Log.d(TAG, "ghy onTouch: onTouch event1.getAction() "+event.getAction());
 
-               // Log.d(TAG, "jkl getValues " + transX + " : " + transY);
+                // Log.d(TAG, "jkl getValues " + transX + " : " + transY);
 
 
-                final MotionEvent event1 = event;
+                if (gestureDetector1 == null) {
+                    gestureDetector1 = new GestureDetector(mContext, new GestureDetector.SimpleOnGestureListener() {
 
-                final GestureDetector gestureDetector = new GestureDetector(mContext, new GestureDetector.SimpleOnGestureListener() {
+
+
+
+                        @Override
+                        public boolean onDown(MotionEvent event) {
+                //            Toast.makeText(mContext, "Down detected", Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
+
+                        @Override
+                        public boolean onSingleTapUp(MotionEvent e) {
+                //            Toast.makeText(mContext, "Single tap detected", Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
+
+
+                    @Override
                     public void onLongPress(MotionEvent e) {
                         final int touchX = (int) e.getX();
                         final int touchY = (int) e.getY();
 
-                        //Log.d(TAG, "ghy onTouch: GestureDetector e.getAction() " + e.getAction());
-                        //Log.d(TAG, "ghy onTouch: GestureDetector event1.getAction() " + event1.getAction());
-                        if ((e.getAction() == MotionEvent.ACTION_DOWN) && (false && event.getAction() == MotionEvent.ACTION_MOVE)) {
-                            //TODO: show selected text cursor while navigating or zooming the image
-                         //   Log.d(TAG, "ghy onTouch: ACTION_DOWN GestureDetector event.getAction() " + event.getAction());
-/*
-                            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(100, 100);
-                            params.leftMargin = (int) (visionRectLeft * widthZoomFactor - zoomedOffsetX * widthZoomFactor) - 100;
-                            params.topMargin = (int) (visionRectTop * heightZoomFactor - zoomedOffsetY * heightZoomFactor) - 100;
-                            mivStartCursor.setLayoutParams(params);
+                   //     Toast.makeText(mContext, "Long press detected at X: " + touchX + ", Y: " + touchY, Toast.LENGTH_SHORT).show();
 
-                            RelativeLayout.LayoutParams eparams = new RelativeLayout.LayoutParams(100, 100);
-                            eparams.leftMargin = (int) (visionRectRight * widthZoomFactor - zoomedOffsetX * widthZoomFactor);
-                            eparams.topMargin = (int) (visionRectBottom * heightZoomFactor - zoomedOffsetY * heightZoomFactor);
-                            mivEndCursor.setLayoutParams(eparams);*/
+                        updateTouchState = true;
+
+                        if (unChangedOriginalBitmap == null) {
+                            return;
                         }
-                        //Drawable drawable = ivImage.getDrawable();
-                      //  Log.d(TAG, "wqw onTouch:  getX    X: " + e.getX() + " Y: " + e.getY() + " event X: " + event1.getX() + " Y: " + event1.getY());
-                      //  Log.d(TAG, "wqw onTouch:  getRawX X: " + e.getRawX() + " Y: " + e.getRawY() + " event X: " + event1.getRawX() + " Y: " + event1.getRawY());
-                        //Log.e(TAG, "Longpress detected event "+event.getAction()+" e "+e.getAction());
-                        if (event1.getAction() == MotionEvent.ACTION_UP) {
-                            if(toggleWordOnClick) {
-                                selectWordOnTouch(touchX, touchY, false);
+
+                        final Bitmap originalBitmap = unChangedOriginalBitmap.copy(Bitmap.Config.ARGB_8888, true);
+                        selectedVisionTextRectanglesSimplified.clear();
+
+                        if (debugMode || allWordBorders) {
+                            Canvas canvas = new Canvas(originalBitmap);
+                            Paint paint = new Paint();
+                            paint.setStyle(Paint.Style.STROKE);
+                            paint.setStrokeWidth(2);
+                            paint.setPathEffect(new DashPathEffect(new float[]{2, 2}, 0));
+                            paint.setColor(Color.YELLOW);
+                            paint.setAntiAlias(true);
+
+                            for (VisionWordModel visionWordModel : visionTextRectanglesSimplified) {
+                                Rect rect = visionWordModel.mrect;
+                                canvas.drawRect(rect, paint);
                             }
-                        } else if (isLongClick(event1, cancelZoomNav)) {
-                            // For Android 4.2.2 API 17, Samsung tablet, detecting long press event1.getAction() == MotionEvent.ACTION_MOVE
-                           // Log.d(TAG, "onLongPress: real detected X: " + e.getX() + " Y: " + e.getY() + " event X: " + event.getX() + " Y: " + event.getY() + " raw Y" + event.getRawY());
-                            //Toast.makeText(mContext, "Long Clicked ", Toast.LENGTH_SHORT).show();
-                            updateTouchState = true;
 
-                            final Bitmap originalBitmap = unChangedOriginalBitmap.copy(unChangedOriginalBitmap.getConfig(), true);
-
-
-                            //selectedVisionText.clear();
-                            //selectedVisionTextRectangles.clear();
-                            selectedVisionTextRectanglesSimplified.clear();
-                            if(debugMode || allWordBorders) {
-                                //Iterator it = visionTextRectangles.entrySet().iterator();
-
-                                //selectedVisionTextRectangles.clear();
-                                //selectedVisionText.clear();
-                                for (VisionWordModel visionWordModel : visionTextRectanglesSimplified) {
-                                //while (it.hasNext()) {
-                                    //Map.Entry pair = (Map.Entry) it.next();
-                                    Rect rect = visionWordModel.mrect;
-
-                                    Canvas canvas = new Canvas(originalBitmap);
-                                    // Initialize a new Paint instance to draw the Rectangle
-                                    Paint paint = new Paint();
-                                    paint.setStyle(Paint.Style.STROKE);
-                                    paint.setStrokeWidth(2);
-                                    paint.setPathEffect(new DashPathEffect(new float[]{2, 2}, 0));
-                                    paint.setColor(Color.YELLOW);
-                                    paint.setAntiAlias(true);
-
-                                    canvas.drawBitmap(originalBitmap, 0, 0, paint);
-                                    //canvas.drawText("Testing...", 10, 10, paint);
-                                    canvas.drawRect(rect, paint);
-                                }
-                                TouchImageView.super.setImageBitmap(originalBitmap);
-                            }
-                                //ivImage.invalidate();
-                                // TODO: select the longpressed word
-                                selectWordOnTouch(touchX, touchY, true);
-
+                            TouchImageView.this.setImageBitmap(originalBitmap);
+                            TouchImageView.this.invalidate(); // Refresh the view
                         }
+
+                        // Ensure word selection happens
+
+
+                            selectWordOnTouch(touchX, touchY, true);
+
+
                     }
-                });
-              //  Log.d(TAG, "zxc onTouch: " + event.getRawX() + " ; " + event.getX());
+
+                    });
+                }
+
+
+//                final MotionEvent event1 = event;
+//                final GestureDetector gestureDetector = new GestureDetector(mContext, new GestureDetector.SimpleOnGestureListener() {
+//                    @Override
+//                    public void onLongPress(MotionEvent e) {
+//                        int touchX = (int) e.getX();
+//                        int touchY = (int) e.getY();
+//
+//                        if (event1.getAction() == MotionEvent.ACTION_UP) {
+//                            if (toggleWordOnClick) {
+//                                selectWordOnTouch(touchX, touchY, false);
+//                            }
+//                        } else if (isLongClick(event1, cancelZoomNav)) {
+//                            Toast.makeText(mContext, "Long Clicked", Toast.LENGTH_SHORT).show();
+//                            updateTouchState = true;
+//                            Bitmap originalBitmap = unChangedOriginalBitmap.copy(unChangedOriginalBitmap.getConfig(), true);
+//                            selectedVisionTextRectanglesSimplified.clear();
+//
+//                            if (debugMode || allWordBorders) {
+//                                for (VisionWordModel visionWordModel : visionTextRectanglesSimplified) {
+//                                    Rect rect = visionWordModel.mrect;
+//                                    Canvas canvas = new Canvas(originalBitmap);
+//                                    Paint paint = new Paint();
+//                                    paint.setStyle(Paint.Style.STROKE);
+//                                    paint.setStrokeWidth(2);
+//                                    paint.setPathEffect(new DashPathEffect(new float[]{2, 2}, 0));
+//                                    paint.setColor(Color.YELLOW);
+//                                    paint.setAntiAlias(true);
+//                                    canvas.drawBitmap(originalBitmap, 0, 0, paint);
+//                                    canvas.drawRect(rect, paint);
+//                                }
+//                                TouchImageView.super.setImageBitmap(originalBitmap);
+//                            }
+//                            selectWordOnTouch(touchX, touchY, true);
+//                        }
+//                    }
+//                });
+
+
+                //  Log.d(TAG, "zxc onTouch: " + event.getRawX() + " ; " + event.getX());
                 try {
-                    gestureDetector.onTouchEvent(event);
+
+                        gestureDetector1.onTouchEvent(event);
+
+
                 }catch (Exception e){
                     android.util.Log.d(TAG, "onTouch: gestureDetector.onTouchEvent(event);");
                     e.printStackTrace();
@@ -1379,14 +1421,6 @@ public class TouchImageView extends AppCompatImageView {
                                     visionWordModel.mrect.right,
                                     MainActivity.currentUri
                             );
-
-
-
-
-
-
-
-
                         }
                     }.start();
 
@@ -1503,22 +1537,12 @@ public class TouchImageView extends AppCompatImageView {
                                                 }
                                                 //invalidate();
 
-
-
-
                                             }
-
-
                                         }
-
                                     }
-
-
                                     if(vwm.note!=null) {
                                         ((EditText)((MainActivity) mContext).findViewById(R.id.et)).setText(vwm.note);
                                     }
-
-
                                 }
                                 catch (Exception e){
                                     Toast.makeText(mContext,e.toString()
@@ -1527,8 +1551,6 @@ public class TouchImageView extends AppCompatImageView {
                             }
 
                         }
-
-
 
                     }
 
