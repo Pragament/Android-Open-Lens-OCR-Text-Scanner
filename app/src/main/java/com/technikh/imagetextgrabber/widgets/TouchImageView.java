@@ -834,6 +834,20 @@ public class TouchImageView extends AppCompatImageView {
                         @Override
                         public boolean onSingleTapUp(MotionEvent e) {
                 //            Toast.makeText(mContext, "Single tap detected", Toast.LENGTH_SHORT).show();
+                            final int touchX = (int) e.getX();
+                            final int touchY = (int) e.getY();
+                            // Clear previous selection to avoid multiple rectangles
+                            selectedVisionTextRectanglesSimplified.clear();
+
+                            // Reset image to original to remove previous rectangles
+                            if (unChangedOriginalBitmap != null) {
+                                TouchImageView.this.setImageBitmap(unChangedOriginalBitmap.copy(Bitmap.Config.ARGB_8888, true));
+                            }
+
+                            TouchImageView.this.invalidate(); // Force UI refresh
+
+                            // Select the new word (ensuring old selections are gone)
+                            selectWordOnTouch(touchX, touchY, false);
                             return true;
                         }
 
@@ -875,7 +889,9 @@ public class TouchImageView extends AppCompatImageView {
                         // Ensure word selection happens
 
 
+
                             selectWordOnTouch(touchX, touchY, true);
+
 
 
                     }
