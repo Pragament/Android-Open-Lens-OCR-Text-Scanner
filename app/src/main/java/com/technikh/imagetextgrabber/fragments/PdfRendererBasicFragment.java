@@ -44,7 +44,7 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
-import com.google.firebase.analytics.FirebaseAnalytics;
+//import com.google.firebase.analytics.FirebaseAnalytics;
 import com.technikh.imagetextgrabber.R;
 import com.technikh.imagetextgrabber.widgets.TouchImageView;
 
@@ -63,7 +63,7 @@ public class PdfRendererBasicFragment extends Fragment implements View.OnClickLi
 
     private String TAG = "PdfRendererBasicFragment";
     private Context mContext;
-    private FirebaseAnalytics mFirebaseAnalytics;
+    //private FirebaseAnalytics mFirebaseAnalytics;
 
     /**
      * The filename of the PDF.
@@ -121,7 +121,7 @@ public class PdfRendererBasicFragment extends Fragment implements View.OnClickLi
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
+        //mFirebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
         // Retain view references.
         viewPager = view.findViewById(R.id.viewPager);
         //mImageView = (TouchImageView) view.findViewById(R.id.image);
@@ -157,7 +157,7 @@ public class PdfRendererBasicFragment extends Fragment implements View.OnClickLi
         } catch (IOException e) {
             e.printStackTrace();
             Bundle bundle = new Bundle();
-            mFirebaseAnalytics.logEvent("EXCEPTION_onStart", bundle);
+            //mFirebaseAnalytics.logEvent("EXCEPTION_onStart", bundle);
             Toast.makeText(getActivity(), "Error! " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         ImagePagerAdapter adapter;
@@ -172,7 +172,7 @@ public class PdfRendererBasicFragment extends Fragment implements View.OnClickLi
             closeRenderer();
         } catch (IOException e) {
             Bundle bundle = new Bundle();
-            mFirebaseAnalytics.logEvent("EXCEPTION_onStop", bundle);
+            //mFirebaseAnalytics.logEvent("EXCEPTION_onStop", bundle);
             e.printStackTrace();
         }
         super.onStop();
@@ -273,7 +273,7 @@ public class PdfRendererBasicFragment extends Fragment implements View.OnClickLi
                 // java.lang.IllegalStateException: Already closed
                 e.printStackTrace();
                 Bundle bundle = new Bundle();
-                mFirebaseAnalytics.logEvent("EXCEPTION_mCurrentPage_Close", bundle);
+                //mFirebaseAnalytics.logEvent("EXCEPTION_mCurrentPage_Close", bundle);
             }
         }
         // Use `openPage` to open a specific page in PDF.

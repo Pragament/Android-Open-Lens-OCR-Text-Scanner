@@ -35,7 +35,7 @@ import com.bogdwellers.pinchtozoom.ImageViewerCorrector;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.analytics.FirebaseAnalytics;
+//import com.google.firebase.analytics.FirebaseAnalytics;
 //import com.google.firebase.ml.vision.FirebaseVision;
 //import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 //import com.google.firebase.ml.vision.text.FirebaseVisionText;
@@ -232,7 +232,7 @@ public class TouchImageView extends AppCompatImageView {
     static boolean debugMode = false, snapToWord = false, allowZoom = false, showMargins = false, allWordBorders = false, toggleWordOnClick = false;
     private Context mContext;
     private ImageMatrixTouchHandler imageMatrixTouchHandler;
-    private FirebaseAnalytics mFirebaseAnalytics;
+    //private FirebaseAnalytics mFirebaseAnalytics;
     //private MultiTouchListener multiTouchListener;
 
     private boolean textSelectionInProgress = false;
@@ -296,7 +296,7 @@ public class TouchImageView extends AppCompatImageView {
         } catch (Exception e) {
             e.printStackTrace();
             android.os.Bundle bundle = new android.os.Bundle();
-            mFirebaseAnalytics.logEvent("EXCEPTION_animateZoom", bundle);
+            //mFirebaseAnalytics.logEvent("EXCEPTION_animateZoom", bundle);
         }
         sharedConstructing(mContext);
         unChangedOriginalBitmap = null;
@@ -486,7 +486,7 @@ public class TouchImageView extends AppCompatImageView {
                                                 Log.d(TAG, "Exception: sort ");
                                                 e.printStackTrace();
                                                 Bundle bundle = new Bundle();
-                                                mFirebaseAnalytics.logEvent("EXCEPTION_sort", bundle);
+                                                //mFirebaseAnalytics.logEvent("EXCEPTION_sort", bundle);
                                             }
                                         }
                                     })
@@ -507,7 +507,7 @@ public class TouchImageView extends AppCompatImageView {
                 }catch (Exception e){
                     e.printStackTrace();
                     android.os.Bundle bundle = new android.os.Bundle();
-                    mFirebaseAnalytics.logEvent("EXCEPTION_onPreDraw", bundle);
+                    //mFirebaseAnalytics.logEvent("EXCEPTION_onPreDraw", bundle);
                 }
                 return true;    //note, that "true" is important, since you don't want drawing pass to be canceled
             }
@@ -533,7 +533,7 @@ public class TouchImageView extends AppCompatImageView {
 
     private void sharedConstructing(Context context) {
         this.mContext = context;
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        //mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
 
         ImageViewerCorrector corrector = new ImageViewerCorrector() {
 /*
@@ -624,7 +624,7 @@ public class TouchImageView extends AppCompatImageView {
                     imageView = (ImageView) view;
                 } catch (ClassCastException e) {
                     android.os.Bundle bundle = new android.os.Bundle();
-                    mFirebaseAnalytics.logEvent("EXCEPTION_ClassCastException", bundle);
+                    //mFirebaseAnalytics.logEvent("EXCEPTION_ClassCastException", bundle);
                     throw new IllegalStateException("View must be an instance of ImageView", e);
                 }
                 // Get the matrix
@@ -950,7 +950,7 @@ public class TouchImageView extends AppCompatImageView {
                     android.util.Log.d(TAG, "onTouch: gestureDetector.onTouchEvent(event);");
                     e.printStackTrace();
                     android.os.Bundle bundle = new android.os.Bundle();
-                    mFirebaseAnalytics.logEvent("EXCEPTION_onTouchEvent", bundle);
+                    //mFirebaseAnalytics.logEvent("EXCEPTION_onTouchEvent", bundle);
                 }
                // Log.d(TAG, "zxc onTouch: " + event.getRawX() + " ; " + event.getX());
                 if(!cancelZoomNav) {
@@ -959,7 +959,7 @@ public class TouchImageView extends AppCompatImageView {
                     }catch (Exception e){
                         e.printStackTrace();
                         android.os.Bundle bundle = new android.os.Bundle();
-                        mFirebaseAnalytics.logEvent("EXCEPTION_onTouch", bundle);
+                        //mFirebaseAnalytics.logEvent("EXCEPTION_onTouch", bundle);
                         /*ViewGroup.LayoutParams lParams = imageView.getLayoutParams();
                         OnCustomEventListener mlListener = mListener;
                         RelativeLayout imageParentLayout = (RelativeLayout)imageView.getParent();

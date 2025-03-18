@@ -41,7 +41,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
-import com.google.firebase.analytics.FirebaseAnalytics;
+//import com.google.firebase.analytics.FirebaseAnalytics;
 import com.technikh.imagetextgrabber.R;
 import com.technikh.imagetextgrabber.room.entity.Highlights;
 import com.technikh.imagetextgrabber.widgets.TouchImageView;
@@ -64,7 +64,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
 
     private String TAG = "PdfRendererBasicFragment";
     private Context mContext;
-    private FirebaseAnalytics mFirebaseAnalytics;
+    //private FirebaseAnalytics mFirebaseAnalytics;
 
     /**
      * The filename of the PDF.
@@ -121,7 +121,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
         super.onCreate(savedInstanceState);
         setContentView(R.layout.fragment_pdf_renderer_basic);
 
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        //mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         // Retain view references.
         viewPager = findViewById(R.id.viewPager);
         //mImageView = (TouchImageView) view.findViewById(R.id.image);
@@ -168,7 +168,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
         } catch (IOException e) {
             e.printStackTrace();
             android.os.Bundle bundle = new android.os.Bundle();
-            mFirebaseAnalytics.logEvent("EXCEPTION_onStart", bundle);
+            //mFirebaseAnalytics.logEvent("EXCEPTION_onStart", bundle);
             Toast.makeText(this, "Error! " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         ImagePagerAdapter adapter;
@@ -183,7 +183,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
             closeRenderer();
         } catch (IOException e) {
             android.os.Bundle bundle = new android.os.Bundle();
-            mFirebaseAnalytics.logEvent("EXCEPTION_onStop", bundle);
+            //mFirebaseAnalytics.logEvent("EXCEPTION_onStop", bundle);
             e.printStackTrace();
         }
         super.onStop();
@@ -284,7 +284,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
                 // java.lang.IllegalStateException: Already closed
                 e.printStackTrace();
                 android.os.Bundle bundle = new android.os.Bundle();
-                mFirebaseAnalytics.logEvent("EXCEPTION_mCurrentPage_Close", bundle);
+                //mFirebaseAnalytics.logEvent("EXCEPTION_mCurrentPage_Close", bundle);
             }
         }
         // Use `openPage` to open a specific page in PDF.

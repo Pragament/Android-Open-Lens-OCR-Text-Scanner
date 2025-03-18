@@ -30,7 +30,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.google.android.material.snackbar.Snackbar;
-import com.google.firebase.analytics.FirebaseAnalytics;
+//import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.mlkit.vision.text.Text;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 import com.technikh.imagetextgrabber.R;
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity{
     private String TAG = "MainActivity";
     private String PREF_SPINNER_USER_SETTINGS = "spinner_user_settings";
     public static final String FRAGMENT_PDF_RENDERER_BASIC = "pdf_renderer_basic";
-    private FirebaseAnalytics mFirebaseAnalytics;
+    //private FirebaseAnalytics mFirebaseAnalytics;
     ImageViewSettingsModel imageViewSettingsModel;
     public static com.technikh.imagetextgrabber.room.MyDatabase db;
 
@@ -168,7 +168,7 @@ public class MainActivity extends AppCompatActivity{
 
         /*Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);*/
-            mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            //mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
             SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
 
@@ -199,8 +199,8 @@ public class MainActivity extends AppCompatActivity{
                     ivImage.initOptions(imageViewSettingsModel);
 
                     android.os.Bundle bundle = new android.os.Bundle();
-                    bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, delimitedString);
-                    mFirebaseAnalytics.logEvent("SPINNER_SETTINGS_CHANGE", bundle);
+                    //bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, delimitedString);
+                    //mFirebaseAnalytics.logEvent("SPINNER_SETTINGS_CHANGE", bundle);
                 }
             });
 
@@ -313,7 +313,7 @@ public class MainActivity extends AppCompatActivity{
                         pickPdf();
                     } else {
                         android.os.Bundle bundle = new android.os.Bundle();
-                        mFirebaseAnalytics.logEvent("DEVICE_NO_SUPPORT_PDF", bundle);
+                        //mFirebaseAnalytics.logEvent("DEVICE_NO_SUPPORT_PDF", bundle);
                         Snackbar.make(view, "Your device version doesn't support our PDF opening library!", Snackbar.LENGTH_LONG)
                                 .setAction("Action", null).show();
                     }
@@ -401,10 +401,10 @@ public class MainActivity extends AppCompatActivity{
                 initImageView();
 
                 android.os.Bundle bundle = new android.os.Bundle();
-                mFirebaseAnalytics.logEvent("IMAGE_CHANGE", bundle);
+                //mFirebaseAnalytics.logEvent("IMAGE_CHANGE", bundle);
             } else if (requestCode == SELECT_PDF) {
                 android.os.Bundle bundle = new android.os.Bundle();
-                mFirebaseAnalytics.logEvent("PDF_CHANGE", bundle);
+                //mFirebaseAnalytics.logEvent("PDF_CHANGE", bundle);
                 ivImage.setVisibility(android.view.View.VISIBLE);
                 findViewById(R.id.container).setVisibility(android.view.View.GONE);
 
