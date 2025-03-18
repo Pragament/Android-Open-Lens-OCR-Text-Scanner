@@ -837,17 +837,19 @@ public class TouchImageView extends AppCompatImageView {
                             final int touchX = (int) e.getX();
                             final int touchY = (int) e.getY();
                             // Clear previous selection to avoid multiple rectangles
-                            selectedVisionTextRectanglesSimplified.clear();
+ //                           selectedVisionTextRectanglesSimplified.clear();
 
                             // Reset image to original to remove previous rectangles
-                            if (unChangedOriginalBitmap != null) {
-                                TouchImageView.this.setImageBitmap(unChangedOriginalBitmap.copy(Bitmap.Config.ARGB_8888, true));
-                            }
+//                            if (unChangedOriginalBitmap != null) {
+//                                TouchImageView.this.setImageBitmap(unChangedOriginalBitmap.copy(Bitmap.Config.ARGB_8888, true));
+//                            }
 
                             TouchImageView.this.invalidate(); // Force UI refresh
 
                             // Select the new word (ensuring old selections are gone)
-                            selectWordOnTouch(touchX, touchY, false);
+                            if (toggleWordOnClick) {
+                                selectWordOnTouch(touchX, touchY, false);
+                            }
                             return true;
                         }
 
