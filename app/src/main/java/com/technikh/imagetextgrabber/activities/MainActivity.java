@@ -12,7 +12,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -24,14 +23,18 @@ import android.graphics.drawable.Drawable;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Build;
-
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.google.android.material.snackbar.Snackbar;
-//import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.mlkit.common.model.CustomRemoteModel;
+import com.google.mlkit.common.model.RemoteModelManager;
 import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions;
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 import com.technikh.imagetextgrabber.R;
 import com.technikh.imagetextgrabber.models.ImageViewSettingsModel;
@@ -39,10 +42,10 @@ import com.technikh.imagetextgrabber.models.VisionWordModel;
 import com.technikh.imagetextgrabber.room.entity.Images;
 import com.technikh.imagetextgrabber.widgets.MultiSelectSpinnerWidget;
 import com.technikh.imagetextgrabber.widgets.TouchImageView;
-
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
 import android.view.View;
@@ -54,12 +57,16 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import java.io.IOException;
 import java.util.ArrayList;
-
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
@@ -433,51 +440,181 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
-    // Text recognition ka method
+
+
+
+
+
+    // text recognition methods
+
     private void recognizeText(Bitmap bitmap) {
-        TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+     //   recognizeTextWithModels(bitmap);
+        showLanguageSelectionDialog(bitmap);
+    }
+
+
+
+    // show dialog for language selection
+
+    private void showLanguageSelectionDialog(Bitmap bitmap) {
+        String[] languageNames = {
+                "English", "Hindi", "Marathi", "Tamil", "Telugu", "Gujarati", "Bengali", "Punjabi", "Kannada", "Malayalam",
+                "Odia", "Urdu", "Arabic", "Chinese", "Japanese", "Korean", "Thai", "French", "German", "Italian", "Spanish", "Russian"
+        };
+        String[] languageCodes = {
+                "en", "hi", "mr", "ta", "te", "gu", "bn", "pa", "kn", "ml", "or", "ur", "ar", "zh", "ja", "ko", "th", "fr", "de", "it", "es", "ru"
+        };
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        Spinner spinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, languageNames);
+        spinner.setAdapter(adapter);
+        layout.addView(spinner);
+
+        // Load downloaded models from SharedPreferences
+        SharedPreferences prefs = getSharedPreferences("MLKitModels", MODE_PRIVATE);
+        Set<String> downloadedModels = prefs.getStringSet("DownloadedModels", new HashSet<>());
+
+        TextView downloadedModelsText = new TextView(this);
+        downloadedModelsText.setText("Downloaded Models:");
+        layout.addView(downloadedModelsText);
+
+        LinearLayout downloadedModelsLayout = new LinearLayout(this);
+        downloadedModelsLayout.setOrientation(LinearLayout.VERTICAL);
+        layout.addView(downloadedModelsLayout);
+
+        if (downloadedModels.isEmpty()) {
+            downloadedModelsText.setText("No downloaded models.");
+        } else {
+            for (String modelName : downloadedModels) {
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+
+                TextView modelTextView = new TextView(this);
+                modelTextView.setText(modelName);
+                row.addView(modelTextView);
+
+
+                downloadedModelsLayout.addView(row);
+            }
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Select Language for OCR")
+                .setView(layout)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    int position = spinner.getSelectedItemPosition();
+                    String selectedLanguageCode = languageCodes[position];
+                    addModelToStorage(languageNames[position]); // Track model
+                    recognizeTextWithMLKit(bitmap, selectedLanguageCode);
+                })
+
+                .show();
+    }
+
+    // add model to storage
+
+    private void addModelToStorage(String modelName) {
+        SharedPreferences prefs = getSharedPreferences("MLKitModels", MODE_PRIVATE);
+        Set<String> models = new HashSet<>(prefs.getStringSet("DownloadedModels", new HashSet<>()));
+        models.add(modelName);
+        prefs.edit().putStringSet("DownloadedModels", models).apply();
+    }
+
+
+
+
+
+    // method for text recognition with MLKit
+
+    private void recognizeTextWithMLKit(Bitmap bitmap, String languageCode) {
+        TextRecognizer recognizer = getTextRecognizer(languageCode);
+
+        if (recognizer == null) {
+            Toast.makeText(this, "Text recognition model for " + languageCode + " is not available.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        AlertDialog progressDialog = new AlertDialog.Builder(this)
+                .setTitle("Processing Image")
+                .setMessage("Please wait while text recognition is in progress...")
+                .setCancelable(false)
+                .create();
+        progressDialog.show();
 
         InputImage image = InputImage.fromBitmap(bitmap, 0);
 
-        recognizer.process(image)
-                .addOnSuccessListener(visionText -> {
-                    if (visionText.getText().isEmpty()) {
-                        Toast.makeText(this, "No text found in image", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    StringBuilder recognizedText = new StringBuilder();
-                    for (Text.TextBlock block : visionText.getTextBlocks()) {
-                        recognizedText.append(block.getText()).append("\n");
-                    }
-                    EditText editText = findViewById(R.id.recognized_text_edit);
-                    editText.setText(recognizedText.toString());
-                    editText.setVisibility(View.VISIBLE);
+        // Delay processing by 3 seconds
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            recognizer.process(image)
+                    .addOnSuccessListener(visionText -> {
+                        progressDialog.dismiss();
 
-                    Button okButton = findViewById(R.id.ok_button); // XML me ek button add karo
-                    okButton.setVisibility(View.VISIBLE);
+                        if (visionText.getText().isEmpty()) {
+                            Toast.makeText(this, "No text found in image", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
 
-                    Handler handler = new Handler();
-                    Runnable showDialog = () -> {
-                        new AlertDialog.Builder(this)
+                        StringBuilder recognizedText = new StringBuilder();
+                        for (Text.TextBlock block : visionText.getTextBlocks()) {
+                            recognizedText.append(block.getText()).append("\n");
+                        }
+
+                        EditText editText = findViewById(R.id.recognized_text_edit);
+                        Button okButton = findViewById(R.id.ok_button);
+
+                        editText.setText(recognizedText.toString());
+                        editText.setVisibility(View.VISIBLE);
+                        okButton.setVisibility(View.VISIBLE);
+
+                        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this)
                                 .setTitle("Recognized Text")
                                 .setMessage(visionText.getText())
                                 .setPositiveButton("OK", (dialog, which) -> {
                                     dialog.dismiss();
                                     editText.setVisibility(View.GONE);
                                     okButton.setVisibility(View.GONE);
-                                })
-                                .show();
-                    };
+                                });
 
-                    //handler.postDelayed(showDialog, 10000); // 10 second delay
-
-                    okButton.setOnClickListener(v -> {
-                        handler.removeCallbacks(showDialog); // Agar user "OK" dabata hai toh delay hatao
-                        showDialog.run(); // Turant AlertDialog show karo
+                        okButton.setOnClickListener(v -> alertDialog.show());
+                    })
+                    .addOnFailureListener(e -> {
+                        progressDialog.dismiss();
+                        Toast.makeText(this, "Failed to recognize text. Please try again later.", Toast.LENGTH_LONG).show();
                     });
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to recognize text: " + e.getMessage(), Toast.LENGTH_LONG).show());
+        }, 5000); // 5-second delay
     }
+
+
+
+    // method to get text recognizer based on language code
+    private TextRecognizer getTextRecognizer(String languageCode) {
+        switch (languageCode) {
+            case "zh":
+                return TextRecognition.getClient(new ChineseTextRecognizerOptions.Builder().build());
+            case "ja":
+                return TextRecognition.getClient(new JapaneseTextRecognizerOptions.Builder().build());
+            case "ko":
+                return TextRecognition.getClient(new KoreanTextRecognizerOptions.Builder().build());
+            case "hi": case "mr": case "bn": case "pa":
+            case "ta": case "te": case "gu": case "kn":
+            case "ml": case "or": case "ur":
+                return TextRecognition.getClient(new DevanagariTextRecognizerOptions.Builder().build());
+            default:
+                return TextRecognition.getClient(new TextRecognizerOptions.Builder().build());
+        }
+    }
+
+
+
+
+
+
+
+
+
 
     //----------------------------------------------------------------------
 
