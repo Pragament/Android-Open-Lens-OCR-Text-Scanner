@@ -47,6 +47,21 @@ dependencies {
     //implementation 'com.google.firebase:firebase-ml-vision:24.0.3' // Agar cloud text recognition chahiye
     //implementation 'com.google.firebase:firebase-analytics:21.5.0' // Optional, agar Firebase use kar rahe ho
 
+    // To recognize Latin script
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
+
+    // To recognize Chinese script
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition-chinese:16.0.1'
+
+    // To recognize Devanagari script
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition-devanagari:16.0.1'
+
+    // To recognize Japanese script
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition-japanese:16.0.1'
+
+    // To recognize Korean script
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition-korean:16.0.1'
+
     // Room dependencies
     def room_version = "2.6.1" // Updated Room
     implementation "androidx.room:room-runtime:$room_version"
@@ -56,6 +71,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+
 }
 
 //apply plugin: 'com.google.gms.google-services'
