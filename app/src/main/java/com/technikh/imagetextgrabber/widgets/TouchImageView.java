@@ -40,6 +40,10 @@ import com.google.android.gms.tasks.Task;
 //import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 //import com.google.firebase.ml.vision.text.FirebaseVisionText;
 //import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions;
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
 import com.technikh.imagetextgrabber.R;
 import com.technikh.imagetextgrabber.activities.MainActivity;
 import com.technikh.imagetextgrabber.models.ImageViewSettingsModel;
@@ -433,72 +437,22 @@ public class TouchImageView extends AppCompatImageView {
 
                         if (visionTextRectanglesSimplified.isEmpty()) {
                             InputImage visionImage = InputImage.fromBitmap(originalBitmap, 0);
-                            TextRecognizer visionDetector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
 
-                            visionDetector.process(visionImage)
-                                    .addOnSuccessListener(new OnSuccessListener<Text>() {
-                                        @Override
-                                        public void onSuccess(Text visionText) {
-                                            // Task completed successfully
-                                            // ...
-                                            //Log.d(TAG, "visionDetector onSuccess: " + visionText.getText());
-                                            List<Text.TextBlock> textBlocks = visionText.getTextBlocks();
+                            // Create text recognizers for multiple scripts
+                            TextRecognizer latinTextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+                            TextRecognizer chineseTextRecognizer = TextRecognition.getClient(new ChineseTextRecognizerOptions.Builder().build());
+                            TextRecognizer devanagariTextRecognizer = TextRecognition.getClient(new DevanagariTextRecognizerOptions.Builder().build());
+                            TextRecognizer japaneseTextRecognizer = TextRecognition.getClient(new JapaneseTextRecognizerOptions.Builder().build());
+                            TextRecognizer koreanTextRecognizer = TextRecognition.getClient(new KoreanTextRecognizerOptions.Builder().build());
 
-                                            selectedVisionTextRectanglesSimplified.clear();
-                                            for (int i = 0; i < textBlocks.size(); i++) {
-                                                Text.TextBlock tBlock = textBlocks.get(i);
-                                                List<Text.Line> tBlockLines = tBlock.getLines();
-                                                for (int j = 0; j < tBlockLines.size(); j++) {
-                                                    Text.Line tLine = tBlockLines.get(j);
-                                                    List<Text.Element> tLineElements = tLine.getElements();
-                                                    for (int k = 0; k < tLineElements.size(); k++) {
-                                                        Text.Element tElement = tLineElements.get(k);
-                                                        Rect boundingRect = tElement.getBoundingBox();
-
-                                                        VisionWordModel visionWordModel = new VisionWordModel(boundingRect, tElement.getText());
-                                                        visionTextRectanglesSimplified.add(visionWordModel);
-                                                        if (boundingRect.height() < minWordHeight) {
-                                                            minWordHeight = boundingRect.height();
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            try {
-                                                Collections.sort(visionTextRectanglesSimplified, new Comparator<VisionWordModel>() {
-                                                    @Override
-                                                    public int compare(VisionWordModel p1, VisionWordModel p2) {
-                                                        // Ascending first left as same line words can have top +/- 5
-                                                        int threshold = minWordHeight;
-                                                        int c = 0;
-                                                        if ((p1.mrect.top < p2.mrect.top + threshold) && (p1.mrect.top < p2.mrect.top - threshold)) {
-                                                            c = -1;
-                                                        } else if ((p1.mrect.top > p2.mrect.top + threshold) && (p1.mrect.top > p2.mrect.top - threshold)) {
-                                                            c = 1;
-                                                        }
-                                                        if (c == 0)
-                                                            c = Double.compare(p1.mrect.left, p2.mrect.left);
-                                                        return c;
-                                                    }
-                                                });
-                                            } catch (Exception e) {
-                                                // java.lang.IllegalArgumentException: Comparison method violates its general contract!
-                                                // https://stackoverflow.com/questions/11441666/java-error-comparison-method-violates-its-general-contract
-                                                Log.d(TAG, "Exception: sort ");
-                                                e.printStackTrace();
-                                                Bundle bundle = new Bundle();
-                                                //mFirebaseAnalytics.logEvent("EXCEPTION_sort", bundle);
-                                            }
-                                        }
-                                    })
-                                    .addOnFailureListener(new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            // Task failed with an exception
-                                            // ...
-                                            Log.d(TAG, "visionDetector onFailure: " + e.getMessage());
-                                        }
-                                    });
+                            // Process the image with all recognizers
+                            processImageWithRecognizer(visionImage, latinTextRecognizer);
+                            processImageWithRecognizer(visionImage, devanagariTextRecognizer);
+                            processImageWithRecognizer(visionImage, japaneseTextRecognizer);
+                            processImageWithRecognizer(visionImage, koreanTextRecognizer);
                         }
+
+
 
 
 
@@ -512,6 +466,64 @@ public class TouchImageView extends AppCompatImageView {
                 return true;    //note, that "true" is important, since you don't want drawing pass to be canceled
             }
         });
+    }
+
+    private void processImageWithRecognizer(InputImage visionImage, TextRecognizer recognizer) {
+        recognizer.process(visionImage)
+                .addOnSuccessListener(new OnSuccessListener<Text>() {
+                    @Override
+                    public void onSuccess(Text visionText) {
+                        // Task completed successfully
+                        List<Text.TextBlock> textBlocks = visionText.getTextBlocks();
+                        selectedVisionTextRectanglesSimplified.clear();
+                        for (Text.TextBlock tBlock : textBlocks) {
+                            List<Text.Line> tBlockLines = tBlock.getLines();
+                            for (Text.Line tLine : tBlockLines) {
+                                List<Text.Element> tLineElements = tLine.getElements();
+                                for (Text.Element tElement : tLineElements) {
+                                    Rect boundingRect = tElement.getBoundingBox();
+                                    VisionWordModel visionWordModel = new VisionWordModel(boundingRect, tElement.getText());
+                                    visionTextRectanglesSimplified.add(visionWordModel);
+                                    if (boundingRect.height() < minWordHeight) {
+                                        minWordHeight = boundingRect.height();
+                                    }
+                                }
+                            }
+                        }
+                        try {
+                            Collections.sort(visionTextRectanglesSimplified, new Comparator<VisionWordModel>() {
+                                @Override
+                                public int compare(VisionWordModel p1, VisionWordModel p2) {
+                                    // Ascending first left as same line words can have top +/- 5
+                                    int threshold = minWordHeight;
+                                    int c = 0;
+                                    if ((p1.mrect.top < p2.mrect.top + threshold) && (p1.mrect.top < p2.mrect.top - threshold)) {
+                                        c = -1;
+                                    } else if ((p1.mrect.top > p2.mrect.top + threshold) && (p1.mrect.top > p2.mrect.top - threshold)) {
+                                        c = 1;
+                                    }
+                                    if (c == 0)
+                                        c = Double.compare(p1.mrect.left, p2.mrect.left);
+                                    return c;
+                                }
+                            });
+                        } catch (Exception e) {
+                            // java.lang.IllegalArgumentException: Comparison method violates its general contract!
+                            // https://stackoverflow.com/questions/11441666/java-error-comparison-method-violates-its-general-contract
+                            Log.d(TAG, "Exception: sort ");
+                            e.printStackTrace();
+                            Bundle bundle = new Bundle();
+                            //mFirebaseAnalytics.logEvent("EXCEPTION_sort", bundle);
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // Task failed with an exception
+                        Log.d(TAG, "visionDetector onFailure: " + e.getMessage());
+                    }
+                });
     }
 
     private boolean isLongClick(MotionEvent event, boolean cancelZoomNav) {
