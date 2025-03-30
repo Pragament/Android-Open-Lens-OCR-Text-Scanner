@@ -23,6 +23,17 @@ import android.graphics.drawable.Drawable;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Build;
+
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.ImageRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.engine.GlideException;
@@ -99,6 +110,10 @@ public class MainActivity extends AppCompatActivity{
     private GridView gridView;
     private  AlertDialog alertDialog;
     public Integer recentHighlight=null;
+    private Button btnSearchDictionary, btnSearchImage;
+    private TextView tvDictionary;
+    private ImageView ivRelatedImage;
+    private RequestQueue requestQueue;
 
 
     public class MyVisionWordModel extends VisionWordModel{
@@ -119,6 +134,23 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        btnSearchDictionary = findViewById(R.id.btnSearchDictionary);
+        btnSearchImage = findViewById(R.id.btnSearchImage);
+        tvDictionary = findViewById(R.id.tvDictionary);
+        ivRelatedImage = findViewById(R.id.ivRelatedImage);
+        requestQueue = Volley.newRequestQueue(this); // Initialize Volley
+
+        btnSearchDictionary.setOnClickListener(v -> {
+
+
+            fetchDictionaryDefinition("ताज़ा"); // Example word
+        });
+
+        btnSearchImage.setOnClickListener(v -> {Toast.makeText(getApplicationContext(), "", Toast.LENGTH_SHORT).show();
+
+
+            fetchRelatedImage(""); // Example image search
+        });
 
 
 
@@ -339,6 +371,44 @@ public class MainActivity extends AppCompatActivity{
     }
 
 
+
+    // Fetch Dictionary Meaning
+    private void fetchDictionaryDefinition(String word) {
+        String url = "https://text.pollinations.ai/define%20in%20hindi%20and%20english%20" + word;
+
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    tvDictionary.setText(response);
+                    tvDictionary.setVisibility(View.VISIBLE);
+
+                },
+                error -> Toast.makeText(MainActivity.this, "Error fetching dictionary", Toast.LENGTH_SHORT).show());
+
+        requestQueue.add(stringRequest);
+    }
+
+    // Fetch Related Image
+    private void fetchRelatedImage(String word) {
+        String imageUrl = "https://image.pollinations.ai/prompt/image%20representing%20" + word;
+
+        ImageRequest imageRequest = new ImageRequest(imageUrl,
+                response -> {
+                    ivRelatedImage.setImageBitmap(response);
+                    ivRelatedImage.setVisibility(View.VISIBLE);
+
+                },
+                0, 0, ImageView.ScaleType.CENTER_CROP, null,
+                error -> Toast.makeText(MainActivity.this, "Error fetching image", Toast.LENGTH_SHORT).show());
+
+        requestQueue.add(imageRequest);
+    }
+
+
+
+
+
+
     private void initImageView(){
         ivImage.initOptions(imageViewSettingsModel);
 
@@ -425,7 +495,7 @@ public class MainActivity extends AppCompatActivity{
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
                         recognizeText(bitmap);
 
-                        
+
 
                         // PDF ka preview set karte hain
                         ivImage.setImageBitmap(bitmap);
