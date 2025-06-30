@@ -6,7 +6,17 @@
     android:layout_height="match_parent"
     tools:context=".activities.MainActivity">
 
+    <!-- Main Content Layout -->
     <include layout="@layout/content_main" />
+
+    <!-- TouchImageView for displaying zoomable images -->
+    <com.technikh.imagetextgrabber.widgets.TouchImageView
+        android:id="@+id/ivImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:scaleType="fitCenter"
+        android:contentDescription="Zoomable Image Viewer" />
 
     <!-- Recognized Text EditText -->
     <EditText
@@ -26,29 +36,84 @@
         android:layout_width="56dp"
         android:layout_height="56dp"
         android:text="OK"
-        android:layout_gravity="top|right"
+        android:layout_gravity="top|end"
         android:layout_marginTop="16dp"
+        android:layout_marginEnd="10dp"
         android:visibility="gone"
         android:background="@drawable/rounded_button"
         android:backgroundTint="#1abc9c"
-        android:textColor="@android:color/white"
-        android:layout_marginRight="10dp"/>
+        android:textColor="@android:color/white" />
 
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- PDF Navigation Layout (Positioned above FABs) -->
+    <!-- PDF Navigation Layout (above FABs) -->
+    <LinearLayout
+        android:id="@+id/pdfNavigationLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="12dp"
+        android:background="#CC000000"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="150dp"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btnPrevPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Previous"
+            android:layout_marginEnd="12dp"
+            android:backgroundTint="#1abc9c"
+            android:textColor="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/tvPageInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Page 1 of 1"
+            android:textAlignment="center"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/btnNextPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Next"
+            android:layout_marginStart="12dp"
+            android:backgroundTint="#1abc9c"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+    <!-- Floating Action Button for PDF -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabPdf"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginRight="@dimen/fab_margin"
+        android:layout_marginEnd="20dp"
         android:layout_marginBottom="80dp"
         app:srcCompat="@drawable/ic_picture_as_pdf_black_24dp" />
 
+    <!-- Floating Action Button for Gallery -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="@dimen/fab_margin"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="16dp"
         app:srcCompat="@android:drawable/ic_menu_gallery" />
+
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
