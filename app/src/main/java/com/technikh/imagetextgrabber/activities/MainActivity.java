@@ -55,13 +55,10 @@ import com.technikh.imagetextgrabber.widgets.MultiSelectSpinnerWidget;
 import com.technikh.imagetextgrabber.widgets.TouchImageView;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
-import android.util.SparseArray;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -70,7 +67,6 @@ import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -81,8 +77,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
@@ -95,16 +89,6 @@ public class MainActivity extends AppCompatActivity{
 
     int SELECT_PICTURE = 101;
     int SELECT_PDF = 102;
-    private static final String STATE_CURRENT_PAGE = "current_page";
-    private static final String STATE_PDF_URI = "pdf_uri";
-    private PdfRenderer mPdfRenderer;
-    private PdfRenderer.Page mCurrentPage;
-    private int mPageCount;
-    private int mCurrentPageIndex = 0;
-    private SparseArray<Bitmap> mPageCache = new SparseArray<>();
-    private final int CACHE_SIZE = 3;
-    private ExecutorService mPdfExecutor = Executors.newSingleThreadExecutor();
-    private Uri mPdfUri;
     TouchImageView ivImage;
     TextView saveNoteTV;
     RelativeLayout imageParentLayout;
@@ -154,9 +138,6 @@ public class MainActivity extends AppCompatActivity{
         btnSearchImage = findViewById(R.id.btnSearchImage);
         tvDictionary = findViewById(R.id.tvDictionary);
         ivRelatedImage = findViewById(R.id.ivRelatedImage);
-        Button btnPrevPage = findViewById(R.id.btnPrevPage);
-        Button btnNextPage = findViewById(R.id.btnNextPage);
-        TextView tvPageInfo = findViewById(R.id.tvPageInfo);
         requestQueue = Volley.newRequestQueue(this); // Initialize Volley
 
         btnSearchDictionary.setOnClickListener(v -> {
@@ -423,337 +404,11 @@ public class MainActivity extends AppCompatActivity{
         requestQueue.add(imageRequest);
     }
 
-    // Add these constants at the top of the class
-    private static final int MAX_CACHE_SIZE = 5; // Reduced from unlimited
-    private static final int MAX_BITMAP_DIMENSION = 2048; // Max width/height for bitmaps
-
-    private void initImageViewForPdf() {
-        // Re-initialize the custom event listener for text copying
-        ivImage.setCustomEventListener(new TouchImageView.OnCustomEventListener() {
-            public void onEvent() {
-                et_image_text.setText(ivImage.getContentDescription());
-                et_image_text.setSelectAllOnFocus(true);
-            }
-
-        });
-        addGestureSupport();
-        // Initialize options
-        ivImage.initOptions(imageViewSettingsModel);
-
-        // FIXED: Reset the ImageView to ensure it's in a proper state for interaction
-        // Check if the method exists before calling it
-        try {
-            // Try to call resetZoom if it exists
-            ivImage.getClass().getMethod("resetZoom").invoke(ivImage);
-        } catch (Exception e) {
-            // If resetZoom doesn't exist, try alternative methods
-            try {
-                // Try setZoom method with scale 1.0f
-                ivImage.getClass().getMethod("setZoom", float.class).invoke(ivImage, 1.0f);
-            } catch (Exception e2) {
-                // If no zoom methods exist, just log and continue
-                Log.d(TAG, "No zoom reset methods available in TouchImageView");
-            }
-        }
-    }
-
-    // Replace the renderPage method with this optimized version
-    private void renderPage(int pageIndex) {
-        if (mPdfRenderer == null || pageIndex < 0 || pageIndex >= mPageCount) {
-            Log.e(TAG, "Invalid renderPage call: pageIndex=" + pageIndex + ", mPageCount=" + mPageCount);
-            return;
-        }
-
-        Log.d(TAG, "Rendering page: " + pageIndex);
-        showProgress(true);
-
-        // Try to get from cache first
-        Bitmap cachedBitmap = mPageCache.get(pageIndex);
-        if (cachedBitmap != null && !cachedBitmap.isRecycled()) {
-            Log.d(TAG, "Using cached bitmap for page " + pageIndex);
-            ivImage.setImageBitmap(cachedBitmap);
-            mCurrentPageIndex = pageIndex;
-            updatePageInfo();
-            showProgress(false);
-            // Re-initialize TouchImageView functionality for cached pages
-            initImageViewForPdf();
-            return;
-        }
-
-        // Close current page if exists
-        if (mCurrentPage != null) {
-            mCurrentPage.close();
-            mCurrentPage = null;
-        }
-
-        mPdfExecutor.execute(() -> {
-            try {
-                Log.d(TAG, "Rendering page in background: " + pageIndex);
-
-                // Open the requested page
-                PdfRenderer.Page page = mPdfRenderer.openPage(pageIndex);
-
-                // Calculate scaled dimensions that fit within MAX_BITMAP_DIMENSION
-                float scale = Math.min(
-                        (float)MAX_BITMAP_DIMENSION / page.getWidth(),
-                        (float)MAX_BITMAP_DIMENSION / page.getHeight()
-                );
-
-                int width = (int)(page.getWidth() * scale);
-                int height = (int)(page.getHeight() * scale);
-
-                // Create bitmap with calculated dimensions
-                Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-                bitmap.eraseColor(Color.WHITE); // Fill with white background
-
-                // Render the page
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-                page.close();
-
-                Log.d(TAG, "Page rendered successfully: " + pageIndex);
-
-                // Update cache on UI thread
-                runOnUiThread(() -> {
-                    try {
-                        // Add to cache and enforce size limit
-                        mPageCache.put(pageIndex, bitmap);
-                        trimCache();
-
-                        // Display the page
-                        ivImage.setImageBitmap(bitmap);
-                        mCurrentPageIndex = pageIndex;
-                        mCurrentPage = null; // Page is already closed
-
-                        updatePageInfo();
-                        showProgress(false);
-
-                        // Re-initialize TouchImageView functionality and run text recognition
-                        initImageViewForPdf();
-                        recognizeText(bitmap); // Add text recognition for each page
-
-                        Log.d(TAG, "Page displayed successfully: " + pageIndex);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error updating UI with rendered page", e);
-                        showProgress(false);
-                    }
-                });
-
-            } catch (Exception e) {
-                Log.e(TAG, "Error rendering page " + pageIndex, e);
-                runOnUiThread(() -> {
-                    showProgress(false);
-                    Toast.makeText(this, "Error rendering page " + (pageIndex + 1), Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
-    }
-
-    // Add this method to manage cache size
-    private void trimCache() {
-        while (mPageCache.size() > MAX_CACHE_SIZE) {
-            int oldestKey = mPageCache.keyAt(0);
-            Bitmap oldest = mPageCache.get(oldestKey);
-            if (oldest != null && !oldest.isRecycled()) {
-                oldest.recycle();
-            }
-            mPageCache.remove(oldestKey);
-        }
-    }
-
-    // Update the closePdfRenderer method
-    private void closePdfRenderer() {
-        mPdfExecutor.execute(() -> {
-            if (mCurrentPage != null) {
-                mCurrentPage.close();
-                mCurrentPage = null;
-            }
-
-            if (mPdfRenderer != null) {
-                mPdfRenderer.close();
-                mPdfRenderer = null;
-            }
-
-            // Clear cache on background thread
-            for (int i = 0; i < mPageCache.size(); i++) {
-                Bitmap bitmap = mPageCache.valueAt(i);
-                if (bitmap != null && !bitmap.isRecycled()) {
-                    bitmap.recycle();
-                }
-            }
-            mPageCache.clear();
-        });
-    }
-    private void setupNavigationControls() {
-        // Find or create navigation buttons
-        Button btnPrevPage = findViewById(R.id.btnPrevPage);
-        Button btnNextPage = findViewById(R.id.btnNextPage);
-        TextView tvPageInfo = findViewById(R.id.tvPageInfo);
-
-        // Update page info display
-        updatePageInfo();
-
-        // Previous page button
-        btnPrevPage.setOnClickListener(v -> {
-            if (mCurrentPageIndex > 0) {
-                renderPage(mCurrentPageIndex - 1);
-                updatePageInfo();
-            }
-        });
-
-        // Next page button
-        btnNextPage.setOnClickListener(v -> {
-            if (mCurrentPageIndex < mPageCount - 1) {
-                renderPage(mCurrentPageIndex + 1);
-                updatePageInfo();
-            }
-        });
-
-        // Enable/disable buttons based on current page
-        btnPrevPage.setEnabled(mCurrentPageIndex > 0);
-        btnNextPage.setEnabled(mCurrentPageIndex < mPageCount - 1);
-    }
-
-    private void updatePageInfo() {
-        TextView tvPageInfo = findViewById(R.id.tvPageInfo);
-        if (tvPageInfo != null) {
-            tvPageInfo.setText(String.format("Page %d of %d", mCurrentPageIndex + 1, mPageCount));
-        }
-
-        // Update button states
-        Button btnPrevPage = findViewById(R.id.btnPrevPage);
-        Button btnNextPage = findViewById(R.id.btnNextPage);
-
-        if (btnPrevPage != null) {
-            btnPrevPage.setEnabled(mCurrentPageIndex > 0);
-        }
-        if (btnNextPage != null) {
-            btnNextPage.setEnabled(mCurrentPageIndex < mPageCount - 1);
-        }
-    }
-
-    // Update the loadPdf method
-    private void loadPdf(Uri pdfUri) {
-        ivImage.setVisibility(View.VISIBLE);
-        findViewById(R.id.container).setVisibility(View.GONE);
-        showProgress(true);
-
-        mPdfExecutor.execute(() -> {
-            try {
-                ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(pdfUri, "r");
-                if (pfd != null) {
-                    closePdfRenderer(); // Close any existing renderer first
-
-                    PdfRenderer renderer = new PdfRenderer(pfd);
-                    int pageCount = renderer.getPageCount();
-
-                    runOnUiThread(() -> {
-                        mPdfRenderer = renderer;
-                        mPageCount = pageCount;
-                        mPdfUri = pdfUri;
-                        mCurrentPageIndex = 0; // Reset to first page
-
-                        // Setup navigation controls first
-                        setupNavigationControls();
-
-                        // Show navigation controls
-                        View navLayout = findViewById(R.id.pdfNavigationLayout);
-                        if (navLayout != null) {
-                            navLayout.setVisibility(View.VISIBLE);
-                        }
-
-                        // Initialize TouchImageView for PDF mode
-                        initImageViewForPdf();
-                        addGestureSupport(); // Re-add gesture support for PDF mode
-
-                        // Load first page after setup
-                        renderPage(0);
-                    });
-                }
-            } catch (IOException e) {
-                runOnUiThread(() -> {
-                    showProgress(false);
-                    Toast.makeText(this, "Failed to load PDF", Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
-    }
-
-    private void addGestureSupport() {
-        ivImage.setOnTouchListener(new View.OnTouchListener() {
-            private float startX, startY;
-            private static final int SWIPE_THRESHOLD = 100;
-            private static final int SWIPE_VELOCITY_THRESHOLD = 100;
-            private boolean isPdfMode = false;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                // Check if we're in PDF mode
-                isPdfMode = (mPdfRenderer != null && mPageCount > 0);
-
-                if (!isPdfMode) {
-                    // For regular images, let TouchImageView handle all touch events
-                    return false; // This allows TouchImageView's built-in functionality
-                }
-
-                // For PDF mode, handle swipe gestures but allow zoom/pan for other gestures
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        startX = event.getX();
-                        startY = event.getY();
-                        break;
-
-                    case MotionEvent.ACTION_UP:
-                        float endX = event.getX();
-                        float endY = event.getY();
-
-                        float deltaX = endX - startX;
-                        float deltaY = endY - startY;
-
-                        // Only handle horizontal swipes that are significantly larger than vertical movement
-                        if (Math.abs(deltaX) > Math.abs(deltaY) &&
-                                Math.abs(deltaX) > SWIPE_THRESHOLD &&
-                                Math.abs(deltaY) < 50) { // Small vertical threshold to avoid conflicts
-
-                            if (deltaX > 0) {
-                                // Swipe right - previous page
-                                if (mCurrentPageIndex > 0) {
-                                    renderPage(mCurrentPageIndex - 1);
-                                    return true; // Consume the event
-                                }
-                            } else {
-                                // Swipe left - next page
-                                if (mCurrentPageIndex < mPageCount - 1) {
-                                    renderPage(mCurrentPageIndex + 1);
-                                    return true; // Consume the event
-                                }
-                            }
-                        }
-                        break;
-                }
-
-                // For PDF mode, let TouchImageView handle zoom/pan for non-swipe gestures
-                return false;
-            }
-        });
-    }
 
 
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putInt(STATE_CURRENT_PAGE, mCurrentPageIndex);
-        outState.putParcelable(STATE_PDF_URI, mPdfUri);
-    }
 
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        mCurrentPageIndex = savedInstanceState.getInt(STATE_CURRENT_PAGE, 0);
-        mPdfUri = savedInstanceState.getParcelable(STATE_PDF_URI);
-        if (mPdfUri != null) {
-            loadPdf(mPdfUri);
-        }
-    }
+
+
     private void initImageView(){
         ivImage.initOptions(imageViewSettingsModel);
 
@@ -783,8 +438,6 @@ public class MainActivity extends AppCompatActivity{
         startActivityForResult(Intent.createChooser(intent, "Select Picture"), SELECT_PICTURE);
 
     }
-
-
 
     //------------------------Updated Code---------------------------------
     @Override
@@ -826,20 +479,11 @@ public class MainActivity extends AppCompatActivity{
 
                 android.os.Bundle bundle = new android.os.Bundle();
                 //mFirebaseAnalytics.logEvent("IMAGE_CHANGE", bundle);
-            }else if (requestCode == SELECT_PDF) {
-                mPdfUri = data.getData();
-                currentUri = data.getData().toString(); // Set current URI for PDF
-
-                // Hide navigation layout initially
-                View navLayout = findViewById(R.id.pdfNavigationLayout);
-                if (navLayout != null) {
-                    navLayout.setVisibility(View.GONE);
-                }
-
-                showProgress(true);
-                loadPdf(mPdfUri);
-
-
+            } else if (requestCode == SELECT_PDF) {
+                android.os.Bundle bundle = new android.os.Bundle();
+                //mFirebaseAnalytics.logEvent("PDF_CHANGE", bundle);
+                ivImage.setVisibility(android.view.View.VISIBLE);
+                findViewById(R.id.container).setVisibility(android.view.View.GONE);
 
                 try {
                     ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(data.getData(), "r");
@@ -865,16 +509,11 @@ public class MainActivity extends AppCompatActivity{
             }
         }
     }
-    private void showProgress(boolean show) {
-        runOnUiThread(() -> {
-            ProgressBar progressBar = findViewById(R.id.progressBar);
-            if (show) {
-                progressBar.setVisibility(View.VISIBLE);
-            } else {
-                progressBar.setVisibility(View.GONE);
-            }
-        });
-    }
+
+
+
+
+
 
     // text recognition methods
 
