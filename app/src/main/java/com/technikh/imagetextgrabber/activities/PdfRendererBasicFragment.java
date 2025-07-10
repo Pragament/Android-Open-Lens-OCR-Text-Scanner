@@ -365,19 +365,12 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
 
     @Override
     public void onClick(android.view.View view) {
-        switch (view.getId()) {
-            case R.id.previous: {
-                //mImageView.resetOCR();
-                // Move to the previous page
-                showPage(mCurrentPage.getIndex() - 1, null);
-                break;
-            }
-            case R.id.next: {
-                //mImageView.resetOCR();
-                // Move to the next page
-                showPage(mCurrentPage.getIndex() + 1, null);
-                break;
-            }
+        if (view.getId() == R.id.previous) {
+            // Move to the previous page
+            showPage(mCurrentPage.getIndex() - 1, null);
+        } else if (view.getId() == R.id.next) {
+            // Move to the next page
+            showPage(mCurrentPage.getIndex() + 1, null);
         }
     }
 
