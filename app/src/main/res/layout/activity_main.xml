@@ -9,6 +9,8 @@
     <include layout="@layout/content_main" />
 
     <!-- Recognized Text EditText -->
+
+
     <EditText
         android:id="@+id/recognized_text_edit"
         android:layout_width="match_parent"
