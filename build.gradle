@@ -1,14 +1,13 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.7.3'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22'
-        classpath 'com.google.gms:google-services:4.4.0' // Updated to the latest stable version
+        classpath 'com.google.gms:google-services:4.4.0'
     }
 }
 
@@ -16,6 +15,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://jitpack.io' } // ✅ Required for PDFView
     }
 }
 

@@ -1424,10 +1424,20 @@ public class TouchImageView extends AppCompatImageView {
 
 
     private void selectWordOnTouch(int touchX, int touchY, boolean longPressMode) {
-        List<ImageView> ivs=new ArrayList(Arrays.asList((ImageView)((MainActivity) mContext).findViewById(R.id.f),
-                (ImageView)((MainActivity) mContext).findViewById(R.id.highlight),
-                (ImageView)((MainActivity) mContext).findViewById(R.id.add_highlight),
-                (ImageView)((MainActivity) mContext).findViewById(R.id.delete_highlight)));
+        List<ImageView> ivs = new ArrayList<>();
+
+        if (mContext instanceof MainActivity) {
+            MainActivity activity = (MainActivity) mContext;
+            ivs = new ArrayList<>(Arrays.asList(
+                    activity.findViewById(R.id.f),
+                    activity.findViewById(R.id.highlight),
+                    activity.findViewById(R.id.add_highlight),
+                    activity.findViewById(R.id.delete_highlight)
+            ));
+        } else {
+            Log.e("TouchImageView", "selectWordOnTouch: mContext is not MainActivity. It is: " + mContext.getClass().getSimpleName());
+            return; // or handle it gracefully
+        }
 
         try {
 

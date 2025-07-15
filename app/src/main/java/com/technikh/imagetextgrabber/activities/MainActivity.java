@@ -7,7 +7,6 @@
 package com.technikh.imagetextgrabber.activities;
 
 import android.app.AlertDialog;
-
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -23,42 +22,12 @@ import android.graphics.drawable.Drawable;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.Build;
-
-
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.ImageRequest;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
-
-
-import com.bumptech.glide.load.DataSource;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.load.engine.GlideException;
-import com.bumptech.glide.request.RequestListener;
-import com.google.android.material.snackbar.Snackbar;
-import com.google.mlkit.common.model.CustomRemoteModel;
-import com.google.mlkit.common.model.RemoteModelManager;
-import com.google.mlkit.vision.text.Text;
-import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
-import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions;
-import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
-import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
-import com.sothree.slidinguppanel.SlidingUpPanelLayout;
-import com.technikh.imagetextgrabber.R;
-import com.technikh.imagetextgrabber.models.ImageViewSettingsModel;
-import com.technikh.imagetextgrabber.models.VisionWordModel;
-import com.technikh.imagetextgrabber.room.entity.Images;
-import com.technikh.imagetextgrabber.widgets.MultiSelectSpinnerWidget;
-import com.technikh.imagetextgrabber.widgets.TouchImageView;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -71,19 +40,40 @@ import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.ImageRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions;
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import com.sothree.slidinguppanel.SlidingUpPanelLayout;
+import com.technikh.imagetextgrabber.R;
+import com.technikh.imagetextgrabber.models.ImageViewSettingsModel;
+import com.technikh.imagetextgrabber.models.VisionWordModel;
+import com.technikh.imagetextgrabber.room.entity.Images;
+import com.technikh.imagetextgrabber.widgets.MultiSelectSpinnerWidget;
+import com.technikh.imagetextgrabber.widgets.TouchImageView;
 
-import android.util.Log;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity{
 
@@ -93,13 +83,16 @@ public class MainActivity extends AppCompatActivity{
     TextView saveNoteTV;
     RelativeLayout imageParentLayout;
     public EditText et_image_text;
+
     private SlidingUpPanelLayout mLayout;
     private String TAG = "MainActivity";
     private String PREF_SPINNER_USER_SETTINGS = "spinner_user_settings";
     public static final String FRAGMENT_PDF_RENDERER_BASIC = "pdf_renderer_basic";
+
     //private FirebaseAnalytics mFirebaseAnalytics;
     ImageViewSettingsModel imageViewSettingsModel;
     public static com.technikh.imagetextgrabber.room.MyDatabase db;
+
 
     public static final String DBNAME="mydb";
     private com.technikh.imagetextgrabber.room.dao.HighlightDataAccess markerDao;
@@ -137,6 +130,7 @@ public class MainActivity extends AppCompatActivity{
         btnSearchDictionary = findViewById(R.id.btnSearchDictionary);
         btnSearchImage = findViewById(R.id.btnSearchImage);
         tvDictionary = findViewById(R.id.tvDictionary);
+
         ivRelatedImage = findViewById(R.id.ivRelatedImage);
         requestQueue = Volley.newRequestQueue(this); // Initialize Volley
 
@@ -213,7 +207,6 @@ public class MainActivity extends AppCompatActivity{
 
             MultiSelectSpinnerWidget mySpin = (MultiSelectSpinnerWidget) findViewById(R.id.spinner_options);
             imageViewSettingsModel = new ImageViewSettingsModel();
-
             mySpin.setItems(imageViewSettingsModel.getAllItems());
 
             String savedString = sharedPref.getString(PREF_SPINNER_USER_SETTINGS, imageViewSettingsModel.getDefaultItemsString());
@@ -443,75 +436,238 @@ public class MainActivity extends AppCompatActivity{
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) {
+
+        if (resultCode == RESULT_OK && data != null && data.getData() != null) {
             currentUri = data.getData().toString();
+
             if (requestCode == SELECT_PICTURE) {
-                ViewGroup.LayoutParams lParams = ivImage.getLayoutParams();
-                imageParentLayout.removeView(ivImage);
-                ivImage = new TouchImageView(this);
-                ivImage.setLayoutParams(lParams);
-                imageParentLayout.addView(ivImage);
+                handleImageSelection(data);
+            } else if (requestCode == SELECT_PDF) {
+                handlePdfSelection(data);
+            }
+        }
+    }
 
-                ivImage.setVisibility(android.view.View.VISIBLE);
-                findViewById(R.id.container).setVisibility(android.view.View.GONE);
+    private void handleImageSelection(Intent data) {
+        try {
+            ViewGroup.LayoutParams lParams = ivImage.getLayoutParams();
+            imageParentLayout.removeView(ivImage);
+            ivImage = new TouchImageView(this);
+            ivImage.setLayoutParams(lParams);
+            imageParentLayout.addView(ivImage);
 
-                com.bumptech.glide.Glide.with(MainActivity.this)
-                        .asBitmap()
-                        .load(data.getData())
-                        .listener(new RequestListener<Bitmap>() {
-                            @Override
-                            public boolean onLoadFailed(@androidx.annotation.Nullable GlideException e, Object model, com.bumptech.glide.request.target.Target<Bitmap> target, boolean isFirstResource) {
-                                return false;
-                            }
+            ivImage.setVisibility(View.VISIBLE);
+            findViewById(R.id.container).setVisibility(View.GONE);
 
-                            @Override
-                            public boolean onResourceReady(Bitmap resource, Object model, com.bumptech.glide.request.target.Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+            com.bumptech.glide.Glide.with(MainActivity.this)
+                    .asBitmap()
+                    .load(data.getData())
+                    .listener(new RequestListener<Bitmap>() {
+                        @Override
+                        public boolean onLoadFailed(@androidx.annotation.Nullable GlideException e, Object model, com.bumptech.glide.request.target.Target<Bitmap> target, boolean isFirstResource) {
+                            Log.e(TAG, "Failed to load image", e);
+                            Toast.makeText(MainActivity.this, "Failed to load image", Toast.LENGTH_SHORT).show();
+                            return false;
+                        }
+
+                        @Override
+                        public boolean onResourceReady(Bitmap resource, Object model, com.bumptech.glide.request.target.Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+                            try {
                                 Drawable drawable = new BitmapDrawable(getResources(), resource);
                                 showSavedHighlights(drawable);
-                                recognizeText(resource);
-                                return false;
+
+                                // Delay text recognition to ensure image is fully loaded
+                                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                    recognizeText(resource);
+                                }, 500);
+
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error processing image: " + e.getMessage(), e);
+                                Toast.makeText(MainActivity.this, "Error processing image", Toast.LENGTH_SHORT).show();
                             }
-                        })
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .into(ivImage);
+                            return false;
+                        }
+                    })
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .into(ivImage);
 
-                initImageView();
+            initImageView();
 
-                android.os.Bundle bundle = new android.os.Bundle();
-                //mFirebaseAnalytics.logEvent("IMAGE_CHANGE", bundle);
-            } else if (requestCode == SELECT_PDF) {
-                android.os.Bundle bundle = new android.os.Bundle();
-                //mFirebaseAnalytics.logEvent("PDF_CHANGE", bundle);
-                ivImage.setVisibility(android.view.View.VISIBLE);
-                findViewById(R.id.container).setVisibility(android.view.View.GONE);
+            Bundle bundle = new Bundle();
+            //mFirebaseAnalytics.logEvent("IMAGE_CHANGE", bundle);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling image selection: " + e.getMessage(), e);
+            Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void handlePdfSelection(Intent data) {
+        try {
+            Bundle bundle = new Bundle();
+            //mFirebaseAnalytics.logEvent("PDF_CHANGE", bundle);
+
+            ivImage.setVisibility(View.VISIBLE);
+            findViewById(R.id.container).setVisibility(View.GONE);
+
+            // Show progress dialog
+            AlertDialog progressDialog = new AlertDialog.Builder(this)
+                    .setTitle("Loading PDF")
+                    .setMessage("Please wait while PDF is being loaded...")
+                    .setCancelable(false)
+                    .create();
+            progressDialog.show();
+
+            // Process PDF in background thread to prevent UI blocking
+            new Thread(() -> {
+                ParcelFileDescriptor pfd = null;
+                PdfRenderer renderer = null;
+                PdfRenderer.Page page = null;
 
                 try {
-                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(data.getData(), "r");
+                    pfd = getContentResolver().openFileDescriptor(data.getData(), "r");
                     if (pfd != null) {
-                        PdfRenderer renderer = new PdfRenderer(pfd);
-                        PdfRenderer.Page page = renderer.openPage(0);
+                        renderer = new PdfRenderer(pfd);
+                        page = renderer.openPage(0);
 
-                        Bitmap bitmap = Bitmap.createBitmap(page.getWidth(), page.getHeight(), Bitmap.Config.ARGB_8888);
-                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-                        recognizeText(bitmap);
+                        // Get original dimensions
+                        int originalWidth = page.getWidth();
+                        int originalHeight = page.getHeight();
 
+                        // Calculate optimal bitmap size to prevent memory issues
+                        int maxSize = 2048;
+                        float scale = 1.0f;
 
+                        if (originalWidth > maxSize || originalHeight > maxSize) {
+                            scale = Math.min((float)maxSize / originalWidth, (float)maxSize / originalHeight);
+                        }
 
-                        // PDF ka preview set karte hain
-                        ivImage.setImageBitmap(bitmap);
+                        int scaledWidth = (int)(originalWidth * scale);
+                        int scaledHeight = (int)(originalHeight * scale);
 
-                        page.close();
-                        renderer.close();
+                        // Create bitmap with calculated size
+                        Bitmap bitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888);
+                        bitmap.eraseColor(Color.WHITE); // Fill with white background
+
+                        // Create matrix for scaling if needed
+                        android.graphics.Matrix matrix = null;
+                        if (scale != 1.0f) {
+                            matrix = new android.graphics.Matrix();
+                            matrix.setScale(scale, scale);
+                        }
+
+                        // Render page to bitmap
+                        page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+
+                        // Update UI on main thread
+                        runOnUiThread(() -> {
+                            try {
+                                progressDialog.dismiss();
+
+                                // Set bitmap to ImageView
+                                ivImage.setImageBitmap(bitmap);
+
+                                // Initialize ImageView for PDF interaction
+                                initImageView();
+
+                                // Show saved highlights if any
+                                Drawable drawable = new BitmapDrawable(getResources(), bitmap);
+                                showSavedHighlights(drawable);
+
+                                // Delay text recognition to ensure PDF is fully displayed
+                                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                    if (!bitmap.isRecycled()) {
+                                        recognizeText(bitmap);
+                                    }
+                                }, 1000);
+
+                                Toast.makeText(MainActivity.this, "PDF loaded successfully", Toast.LENGTH_SHORT).show();
+
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error updating UI with PDF: " + e.getMessage(), e);
+                                Toast.makeText(MainActivity.this, "Error displaying PDF", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+
+                    } else {
+                        runOnUiThread(() -> {
+                            progressDialog.dismiss();
+                            Toast.makeText(MainActivity.this, "Unable to open PDF file", Toast.LENGTH_SHORT).show();
+                        });
                     }
+
                 } catch (IOException e) {
-                    Toast.makeText(this, "Failed to load PDF", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "IOException while processing PDF: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        progressDialog.dismiss();
+                        Toast.makeText(MainActivity.this, "Failed to load PDF: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    });
+                } catch (SecurityException e) {
+                    Log.e(TAG, "SecurityException while processing PDF: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        progressDialog.dismiss();
+                        Toast.makeText(MainActivity.this, "Permission denied to access PDF", Toast.LENGTH_SHORT).show();
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Unexpected error while processing PDF: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        progressDialog.dismiss();
+                        Toast.makeText(MainActivity.this, "Unexpected error loading PDF", Toast.LENGTH_SHORT).show();
+                    });
+                } finally {
+                    // Clean up resources
+                    try {
+                        if (page != null) {
+                            page.close();
+                        }
+                        if (renderer != null) {
+                            renderer.close();
+                        }
+                        if (pfd != null) {
+                            pfd.close();
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "Error closing PDF resources: " + e.getMessage(), e);
+                    }
+                }
+            }).start();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling PDF selection: " + e.getMessage(), e);
+            Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (requestQueue != null) {
+            requestQueue.cancelAll(this);
+            requestQueue.stop();
+        }
+
+        // Clean up any remaining bitmaps
+        if (ivImage != null && ivImage.getDrawable() != null) {
+            Drawable drawable = ivImage.getDrawable();
+            if (drawable instanceof BitmapDrawable) {
+                Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+                if (bitmap != null && !bitmap.isRecycled()) {
+                    bitmap.recycle();
                 }
             }
         }
     }
 
-
-
+    // Add this method to handle low memory situations
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (level >= TRIM_MEMORY_MODERATE) {
+            // Clear image caches when memory is low
+            com.bumptech.glide.Glide.get(this).clearMemory();
+        }
+    }
 
 
 
@@ -592,7 +748,6 @@ public class MainActivity extends AppCompatActivity{
         models.add(modelName);
         prefs.edit().putStringSet("DownloadedModels", models).apply();
     }
-
 
 
 
