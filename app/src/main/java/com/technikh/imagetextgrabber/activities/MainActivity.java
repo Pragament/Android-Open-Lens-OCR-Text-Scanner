@@ -57,6 +57,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity{
+    private SharedPreferences sharedPref;
 
     int SELECT_PICTURE = 101;
     int SELECT_PDF = 102;
@@ -103,30 +104,19 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
-
-        //Toast.makeText(getApplicationContext(),Wiki.getTextExtract("Stack Overflow"),Toast.LENGTH_LONG).show();
-
-        try
-        {
-
-
+        try {
+            // Initialize Views and Listeners
             saveNoteTV = findViewById(R.id.save_note);
             saveNoteTV.setOnClickListener(new android.view.View.OnClickListener() {
                 @Override
                 public void onClick(android.view.View view) {
-
-
                     EditText et = findViewById(R.id.et);
                     String notes = et.getText().toString().trim();
                     if (notes.isEmpty()) {
                         Toast.makeText(getApplicationContext(), "Please enter note", Toast.LENGTH_LONG).show();
                     } else {
                         ivImage.saveNote(notes);
-                        //ToDo:Addtoastinsavenotefunction
                         Toast.makeText(getApplicationContext(), "Note Saved", Toast.LENGTH_LONG).show();
-
                     }
                 }
             });
@@ -136,38 +126,23 @@ public class MainActivity extends AppCompatActivity{
                     .setView(gridView)
                     .create();
 
-
+            // Initialize Database and other variables
             colorArray = new ArrayList<>();
             colorArray.add("#f6e58d");
-
             db = androidx.room.Room.databaseBuilder(getApplicationContext(),
                     com.technikh.imagetextgrabber.room.MyDatabase.class, DBNAME).build();
-
-
             markerDao = db.getHighlightsDao();
             imagesDao = db.getImagesDao();
 
-
-
-
-
-
-
-
-
-
-
-        /*Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);*/
+            // Initialize Firebase, SharedPreferences, and Spinner
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-
-            SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-
+            sharedPref = getPreferences(Context.MODE_PRIVATE);
             MultiSelectSpinnerWidget mySpin = (MultiSelectSpinnerWidget) findViewById(R.id.spinner_options);
             imageViewSettingsModel = new ImageViewSettingsModel();
 
             mySpin.setItems(imageViewSettingsModel.getAllItems());
 
+            // Declare and initialize savedString for settings once
             String savedString = sharedPref.getString(PREF_SPINNER_USER_SETTINGS, imageViewSettingsModel.getDefaultItemsString());
             String[] items = savedString.split(",");
             int[] savedList = new int[items.length];
@@ -177,6 +152,7 @@ public class MainActivity extends AppCompatActivity{
             mySpin.setSelection(savedList);
             mySpin.refreshSpinner();
             imageViewSettingsModel.setSelectedItems(mySpin.getSelectedIndicies());
+
             mySpin.setOnMultiChoiceClickListener(new DialogInterface.OnMultiChoiceClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which, boolean isChecked) {
@@ -196,14 +172,12 @@ public class MainActivity extends AppCompatActivity{
             });
 
             ivImage = findViewById(R.id.ivImage);
-
-
             imageParentLayout = findViewById(R.id.rlParentWrapper);
             et_image_text = findViewById(R.id.et_image_text);
             mLayout = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
             mLayout.setAnchorPoint(0.7f);
 
-            // Get intent, action and MIME type
+            // Handle incoming Intents
             Intent intent = getIntent();
             String action = intent.getAction();
             String type = intent.getType();
@@ -226,6 +200,7 @@ public class MainActivity extends AppCompatActivity{
 
                     android.os.Bundle args = new android.os.Bundle();
                     args.putString("uri", pdfUri.toString());
+                    args.putString("settings", savedString); // Use the variable declared above
                     startActivity(new Intent(MainActivity.this, PdfRendererBasicFragment.class)
                             .putExtra("bundle", args)
                     );
@@ -257,13 +232,13 @@ public class MainActivity extends AppCompatActivity{
 
                     android.os.Bundle args = new android.os.Bundle();
                     args.putString("uri", pdfUri.toString());
+                    args.putString("settings", savedString); // Use the variable declared above
                     startActivity(new Intent(MainActivity.this, PdfRendererBasicFragment.class)
                             .putExtra("bundle", args)
                     );
-
-
                 }
             }
+
             if (loadDefaultImage) {
                 com.bumptech.glide.Glide.with(MainActivity.this)
                         .load(Uri.parse("file:///android_asset/Example.png"))
@@ -395,17 +370,24 @@ public class MainActivity extends AppCompatActivity{
                 android.os.Bundle bundle = new android.os.Bundle();
                 mFirebaseAnalytics.logEvent("IMAGE_CHANGE", bundle);
             }
+            // In onActivityResult() method
+
             else if (requestCode == SELECT_PDF) {
                 android.os.Bundle bundle = new android.os.Bundle();
                 mFirebaseAnalytics.logEvent("PDF_CHANGE", bundle);
                 ivImage.setVisibility(android.view.View.GONE);
                 findViewById(R.id.container).setVisibility(android.view.View.VISIBLE);
 
-
+                // CORRECTED BLOCK
                 android.os.Bundle args = new android.os.Bundle();
+                String savedString = sharedPref.getString(PREF_SPINNER_USER_SETTINGS, new ImageViewSettingsModel().getDefaultItemsString());
+
+                // Use data.getData() here, NOT pdfUri
                 args.putString("uri", data.getData().toString());
-                startActivity(new Intent(MainActivity.this,PdfRendererBasicFragment.class)
-                        .putExtra("bundle",args)
+                args.putString("settings", savedString);
+
+                startActivity(new Intent(MainActivity.this, PdfRendererBasicFragment.class)
+                        .putExtra("bundle", args)
                 );
             }
         }
@@ -531,4 +513,4 @@ public class MainActivity extends AppCompatActivity{
 }
 
 
-
+// ADD THIS LINE

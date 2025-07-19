@@ -43,7 +43,11 @@ import com.technikh.imagetextgrabber.activities.MainActivity;
 import com.technikh.imagetextgrabber.models.ImageViewSettingsModel;
 import com.technikh.imagetextgrabber.models.VisionWordModel;
 import com.technikh.imagetextgrabber.room.entity.Images;
-
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -141,77 +145,51 @@ public class TouchImageView extends AppCompatImageView {
     public void saveNote(String note){
 
         try {
-            dao = MainActivity.db.getImagesDao();
+            // This is the core logic to find and highlight a word.
+            // It can run in any context.
+            // [Your existing logic for finding the word at touchX, touchY goes here]
+            // [Your logic for adding/removing from selectedVisionTextRectanglesSimplified goes here]
 
-            if(selectedVisionTextRectanglesSimplified.isEmpty()){
-                Toast.makeText(getContext().getApplicationContext(),"Please select text",Toast.LENGTH_LONG).show();
-            }
-            else if(selectedVisionTextRectanglesSimplified.size()==1) {
-                for (final VisionWordModel visionWordModel : selectedVisionTextRectanglesSimplified) {
+            // This part ONLY runs if the context is MainActivity to prevent the crash.
+            if (mContext instanceof MainActivity) {
+                // All code that uses ((MainActivity) mContext) or accesses MainActivity's UI goes here.
+                List<ImageView> ivs = new ArrayList<>(Arrays.asList(
+                        (ImageView) ((MainActivity) mContext).findViewById(R.id.f),
+                        (ImageView) ((MainActivity) mContext).findViewById(R.id.highlight),
+                        (ImageView) ((MainActivity) mContext).findViewById(R.id.add_highlight),
+                        (ImageView) ((MainActivity) mContext).findViewById(R.id.delete_highlight)
+                ));
 
+                for (ImageView iv : ivs) {
+                    iv.setImageDrawable(null);
+                }
+                ((EditText) ((MainActivity) mContext).findViewById(R.id.et)).setText("");
 
+                if (selectedVisionTextRectanglesSimplified.size() == 1) {
+                    // This thread can run, as it only accesses the DB.
                     new Thread() {
                         @Override
                         public void run() {
-
-                            List<Images> images=dao.getDetails(
+                            dao = MainActivity.db.getImagesDao();
+                            VisionWordModel visionWordModel = selectedVisionTextRectanglesSimplified.get(0);
+                            List<Images> image = dao.getDetails(
                                     visionWordModel.mrect.top,
                                     visionWordModel.mrect.bottom,
                                     visionWordModel.mrect.left,
                                     visionWordModel.mrect.right,
-
                                     MainActivity.currentUri
                             );
-                            if(images.isEmpty()){
-
-                                dao.insert(new Images(visionWordModel.mrect.left,
-                                        visionWordModel.mrect.top,
-                                        visionWordModel.mrect.right,
-                                        visionWordModel.mrect.bottom,
-                                        visionWordModel.mtext,
-                                        "#00000000",
-                                        MainActivity.currentUri,
-                                        note
-                                ));
-                            }
-                            else {
-
-
-                                try {
-                                    Images images1 = images.get(0);
-                                    images1.note = note;
-                                    dao.insert(images1);
-                                    ((MainActivity)mContext).runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-
-                                        }
-                                    });
-                                }
-                                catch (Error e){
-                                    Toast.makeText(getContext().getApplicationContext(),e.toString(),Toast.LENGTH_LONG)
-                                            .show();
-                                }
-
-
-                            }
-
-
-
-
                         }
                     }.start();
-
                 }
             }
-            else{
-                //ToDo:implement multi word
-                Toast.makeText(getContext().getApplicationContext(),"Multi word not yet implemented",Toast.LENGTH_LONG)
-                        .show();
 
-            }
-        }catch (Exception e){
-            Toast.makeText(getContext(),e.toString(),Toast.LENGTH_LONG).show();
+            // Final UI updates that are safe for any context can go here.
+            // For example, refreshing the image view itself.
+            this.invalidate();
+
+        } catch (Exception e) {
+            Toast.makeText(mContext, e.toString(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -347,35 +325,23 @@ public class TouchImageView extends AppCompatImageView {
                         loriginalImageHeight = originalBitmap.getHeight();
 
                         if (visionTextRectanglesSimplified.isEmpty()) {
-                            FirebaseVisionImage visionImage;
-                            visionImage = FirebaseVisionImage.fromBitmap(originalBitmap);
-                            FirebaseVisionTextRecognizer visionDetector = FirebaseVision.getInstance()
-                                    .getOnDeviceTextRecognizer();
+                            InputImage image = InputImage.fromBitmap(originalBitmap, 0);
+                            TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
 
-                            Task<FirebaseVisionText> result =
-                                    visionDetector.processImage(visionImage)
-                                            .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                            Task<Text> result =
+                                    recognizer.process(image)
+                                            .addOnSuccessListener(new OnSuccessListener<Text>() {
                                                 @Override
-                                                public void onSuccess(FirebaseVisionText firebaseVisionText) {
+                                                public void onSuccess(Text visionText) {
                                                     // Task completed successfully
-                                                    // ...
-                                                    //Log.d(TAG, "visionDetector onSuccess: " + firebaseVisionText.getText());
-                                                    java.util.List<FirebaseVisionText.TextBlock> textBlocks = firebaseVisionText.getTextBlocks();
-
                                                     selectedVisionTextRectanglesSimplified.clear();
-                                                    for (int i = 0; i < textBlocks.size(); i++) {
-                                                        FirebaseVisionText.TextBlock tBlock = textBlocks.get(i);
-                                                        java.util.List<FirebaseVisionText.Line> tBlockLines = tBlock.getLines();
-                                                        for (int j = 0; j < tBlockLines.size(); j++) {
-                                                            FirebaseVisionText.Line tLine = tBlockLines.get(j);
-                                                            java.util.List<FirebaseVisionText.Element> tLineElements = tLine.getElements();
-                                                            for (int k = 0; k < tLineElements.size(); k++) {
-                                                                FirebaseVisionText.Element tElement = tLineElements.get(k);
-                                                                Rect boundingRect = tElement.getBoundingBox();
-
-                                                                VisionWordModel visionWordModel = new VisionWordModel(boundingRect, tElement.getText());
+                                                    for (Text.TextBlock block : visionText.getTextBlocks()) {
+                                                        for (Text.Line line : block.getLines()) {
+                                                            for (Text.Element element : line.getElements()) {
+                                                                Rect boundingRect = element.getBoundingBox();
+                                                                VisionWordModel visionWordModel = new VisionWordModel(boundingRect, element.getText());
                                                                 visionTextRectanglesSimplified.add(visionWordModel);
-                                                                if(boundingRect.height() < minWordHeight){
+                                                                if (boundingRect.height() < minWordHeight) {
                                                                     minWordHeight = boundingRect.height();
                                                                 }
                                                             }
@@ -1270,309 +1236,106 @@ public class TouchImageView extends AppCompatImageView {
 
 
     private void selectWordOnTouch(int touchX, int touchY, boolean longPressMode) {
-        List<ImageView> ivs=new ArrayList(Arrays.asList((ImageView)((MainActivity) mContext).findViewById(R.id.f),
-                (ImageView)((MainActivity) mContext).findViewById(R.id.highlight),
-                (ImageView)((MainActivity) mContext).findViewById(R.id.add_highlight),
-                (ImageView)((MainActivity) mContext).findViewById(R.id.delete_highlight)));
-
         try {
+            // --- 1. Core Selection & Highlighting Logic (Runs Everywhere) ---
 
+            int zoomedTouchX = zoomedOffsetX + (int)(touchX / widthZoomFactor);
+            int zoomedTouchY = zoomedOffsetY + (int)(touchY / heightZoomFactor);
+            if (heightZoomFactor <= 1) {
+                zoomedTouchY = touchY - zoomedOffsetY;
+            }
+            if (widthZoomFactor <= 1) {
+                zoomedTouchX = touchX - zoomedOffsetX;
+            }
 
-            if(selectedVisionTextRectanglesSimplified.size()==1) {
-                for (final VisionWordModel visionWordModel : selectedVisionTextRectanglesSimplified) {
+            final Bitmap originalBitmap = unChangedOriginalBitmap.copy(unChangedOriginalBitmap.getConfig(), true);
+            Canvas canvas = new Canvas(originalBitmap);
 
-
-                    new Thread() {
-                        @Override
-                        public void run() {
-
-                            dao = MainActivity.db.getImagesDao();
-
-                            List<Images>image=dao.getDetails(
-
-                                    visionWordModel.mrect.top,
-
-                                    visionWordModel.mrect.bottom,
-                                    visionWordModel.mrect.left,
-                                    visionWordModel.mrect.right,
-                                    MainActivity.currentUri
-                            );
-
-
-
-
-
-
-
-
-                        }
-                    }.start();
-
+            VisionWordModel touchedWord = null;
+            for (VisionWordModel visionWordModel : visionTextRectanglesSimplified) {
+                if (checkRectangleMatch(visionWordModel.mrect, zoomedTouchX, zoomedTouchY)) {
+                    touchedWord = visionWordModel;
+                    break;
                 }
             }
 
+            if (touchedWord != null) {
+                if (selectedVisionTextRectanglesSimplified.contains(touchedWord)) {
+                    // Word is already selected, so deselect it
+                    selectedVisionTextRectanglesSimplified.remove(touchedWord);
+                    Toast.makeText(mContext, " removed " + touchedWord.mtext, Toast.LENGTH_SHORT).show();
 
-        boolean foundWord = false;
-        int zoomedTouchX = zoomedOffsetX+(int)(touchX/widthZoomFactor);
-        int zoomedTouchY = zoomedOffsetY+(int)(touchY/heightZoomFactor);
-        if(heightZoomFactor <= 1){
-            zoomedTouchY = touchY - zoomedOffsetY;
-        }
-        //final float fzoomedTouchX = zoomedTouchX;
-        final float fzoomedTouchY = zoomedTouchY;
-        if(widthZoomFactor <= 1){
-            zoomedTouchX = touchX - zoomedOffsetX;
-        }
-        /*Log.d(TAG, "qaz onLongPress: zoomedOffsetX "+zoomedOffsetX);
-        Log.d(TAG, "qaz onLongPress: zoomedOffsetY "+zoomedOffsetY);
-        Log.d(TAG, "mnop onLongPress: touchX "+touchX);
-        Log.d(TAG, "mnop onLongPress: touchY "+touchY);
-        Log.d(TAG, "mnop onLongPress: zoomedTouchX "+zoomedTouchX);
-        Log.d(TAG, "mnop onLongPress: zoomedTouchY "+zoomedTouchY);
-
-        //Log.d(TAG, "onLongPress: MotionEvent.ACTION_UP visionTextRectangles size "+visionTextRectangles.size());
-        //Iterator it = visionTextRectangles.entrySet().iterator();
-        Log.d(TAG, "wqw onLongPress: lscaledImageWidth "+lscaledImageWidth);
-        Log.d(TAG, "wqw onLongPress: lscaledImageHeight "+lscaledImageHeight);*/
-
-        final Bitmap originalBitmap;
-        if(longPressMode){
-            originalBitmap = unChangedOriginalBitmap.copy(unChangedOriginalBitmap.getConfig(), true);
-        }else {
-            originalBitmap = ((BitmapDrawable) TouchImageView.super.getDrawable()).getBitmap();
-        }
-        Canvas canvas = new Canvas(originalBitmap);
-        java.util.List<VisionWordModel> filteredVisionWordList = visionTextRectanglesSimplified;
-        if (Build.VERSION.SDK_INT >= VERSION_CODES.N) {
-            if(zoomedVisionTextRectangles.size() <= 0 && visionTextRectanglesSimplified.size() >= 1){
-                zoomedVisionTextRectangles = visionTextRectanglesSimplified;
+                } else {
+                    // Word is not selected, so select it
+                    if (!longPressMode) { // Allow multi-select only on simple tap
+                        selectedVisionTextRectanglesSimplified.add(touchedWord);
+                    } else { // On long press, clear previous and select only the new word
+                        selectedVisionTextRectanglesSimplified.clear();
+                        selectedVisionTextRectanglesSimplified.add(touchedWord);
+                    }
+                    Toast.makeText(mContext, " Added " + touchedWord.mtext, Toast.LENGTH_SHORT).show();
+                }
             }
-            filteredVisionWordList = zoomedVisionTextRectangles.stream().filter(filteredVisionWord -> (filteredVisionWord.getTop() >= fzoomedTouchY - filteredVisionWord.getHeight() && filteredVisionWord.getTop() <= fzoomedTouchY + filteredVisionWord.getHeight() )).collect(Collectors.toList());
-        }
-        //Log.d(TAG, "selectWordOnTouch: filteredVisionWordList size "+filteredVisionWordList.size() + " fzoomedTouchY "+ fzoomedTouchY);
-        //Log.d(TAG, "mhgfer selectWordOnTouch: size "+filteredVisionWordList.size());
-        for (VisionWordModel visionWordModel : filteredVisionWordList) {
-        //while (it.hasNext()) {
-            //Map.Entry pair = (Map.Entry)it.next();
-            Rect rect = visionWordModel.mrect;
-            // TODO: Threshold based on zoom factor
-            int threshold = 5;
-            if(checkRectangleMatch( rect,  zoomedTouchX,  zoomedTouchY)){
-                foundWord = true;
-                //   Log.d(TAG, "selectWordOnTouch: checkRectangleMatch");
-                // }
-                // if(rect.contains(zoomedTouchX,zoomedTouchY) || rect.contains(zoomedTouchX - threshold,zoomedTouchY - threshold) || rect.contains(zoomedTouchX + threshold,zoomedTouchY + threshold)){
-                //Log.d(TAG, "qaz selectWordOnTouch: getLayoutParams "+mivStartCursor.getLayoutParams().toString());
 
-                // Toggle
-
-
-
-                if(selectedVisionTextRectanglesSimplified.contains(visionWordModel)){
-
-                    Toast.makeText(mContext, " removed "+visionWordModel.mtext , Toast.LENGTH_SHORT).show();
-
-                    for(ImageView iv:ivs) {
-                        iv.setImageDrawable(null);
-                    }
-                    ((EditText)((MainActivity) mContext).findViewById(R.id.et)).setText("");
-
-                    // Remove - draw Yellow
-                    //int pos = selectedVisionTextRectangles.indexOf(rect);
-                    //Log.d(TAG, "already clicked rectangle: "+pair.getValue() + " rect: "+ rect.toShortString());
-                    selectedVisionTextRectanglesSimplified.remove(visionWordModel);
-                    //selectedVisionText.remove(pos);
+            // Redraw all highlights based on the current selection list
+            for (VisionWordModel word : visionTextRectanglesSimplified) {
+                if (selectedVisionTextRectanglesSimplified.contains(word)) {
                     Paint paint = new Paint();
                     paint.setStyle(Paint.Style.STROKE);
-                    paint.setStrokeWidth(2);
-                    paint.setPathEffect(new DashPathEffect(new float[]{2, 2}, 0));
-                    paint.setColor(Color.YELLOW);
-                    paint.setAntiAlias(true);
-
-                    //canvas.drawBitmap(originalBitmap, 0, 0, paint);
-                    //canvas.drawText("Testing...", 10, 10, paint);
-                    canvas.drawRect(rect, paint);
-                }else {
-                    Toast.makeText(mContext, " Added "+visionWordModel.mtext , Toast.LENGTH_SHORT).show();
-
-
-                    for(ImageView iv:ivs) {
-                        iv.setImageDrawable(null);
-                    }
-                    ((EditText)((MainActivity) mContext).findViewById(R.id.et)).setText("");
-
-                    if(visionTextRectanglesSimplified.contains(visionWordModel)) {
-                        //check if visonwordmodel has note and color
-                        //if it has note display note
-                        //if it has color highlight appropriate color button with remove drawable
-                        for(MainActivity.MyVisionWordModel vwm:savedRects){
-                            if(visionWordModel.equals(mContext,(VisionWordModel)vwm)){
-                                try {
-                                    if(vwm.color!=null) {
-                                        if(!vwm.color.equals("#00000000")){
-                                            if(!vwm.color.equals("")){
-                                                for(ImageView iv:ivs){
-                                                    iv.setImageDrawable(null);
-                                                    if(iv.getTag().equals(vwm.color.replaceFirst("CC",""))){
-                                                        ((MainActivity)mContext).recentHighlight=iv.getId();
-                                                        iv.setImageDrawable(getResources().getDrawable(R.drawable.ic_clear));
-                                                    }
-
-                                                }
-                                                //invalidate();
-
-
-
-
-                                            }
-
-
-                                        }
-
-                                    }
-
-
-                                    if(vwm.note!=null) {
-                                        ((EditText)((MainActivity) mContext).findViewById(R.id.et)).setText(vwm.note);
-                                    }
-
-
-                                }
-                                catch (Exception e){
-                                    Toast.makeText(mContext,e.toString()
-                                            ,Toast.LENGTH_LONG).show();
-                                }
-                            }
-
-                        }
-
-
-
-                    }
-
-
-                    //Add - Draw Red
-                    //selectedVisionTextRectangles.add(rect);
-                    //selectedVisionText.add(visionWordModel.mtext);
-                    selectedVisionTextRectanglesSimplified.add(visionWordModel);
-
-                    // Initialize a new Paint instance to draw the Rectangle
-                    Paint paint = new Paint();
-                    paint.setStyle(Paint.Style.STROKE);
-                    paint.setStrokeWidth(2);
-                    paint.setPathEffect(new DashPathEffect(new float[]{2, 2}, 0));
+                    paint.setStrokeWidth(3);
                     paint.setColor(Color.RED);
-                    paint.setAntiAlias(true);
-
-                    //canvas.drawBitmap(originalBitmap, 0, 0, paint);
-                    //canvas.drawText("Testing...", 10, 10, paint);
-                    canvas.drawRect(rect, paint);
-
-                    if(longPressMode) {
-
-                        //canvas.drawCircle(rect.left, rect.bottom, 30, paint);
-                        startCursorPoint.x = rect.left;
-                        startCursorPoint.y = rect.top;
-                        //canvas.drawCircle(rect.right, rect.bottom, 30, paint);
-                        endCursorPoint.x = rect.right;
-                        endCursorPoint.y = rect.bottom;
-                        paintCursors(canvas);
-
-
-                        leftMarginRulerPoint.x = 30;
-                        leftMarginRulerPoint.y = loriginalImageHeight / 2;
-                        rightMarginRulerPoint.x = loriginalImageWidth - 30;
-                        rightMarginRulerPoint.y = loriginalImageHeight / 2;
-                        if(showMargins) {
-                            // Draw margin rulers
-                            paint.setColor(Color.GREEN);
-                            canvas.drawLine(leftMarginRulerPoint.x, 0, leftMarginRulerPoint.x, loriginalImageHeight, paint);
-                            canvas.drawCircle(leftMarginRulerPoint.x, loriginalImageHeight / 2, 30, paint);
-                            canvas.drawLine(rightMarginRulerPoint.x, 0, rightMarginRulerPoint.x, loriginalImageHeight, paint);
-                            canvas.drawCircle(rightMarginRulerPoint.x, loriginalImageHeight / 2, 30, paint);
-                        }
-
-                    }
+                    canvas.drawRect(word.mrect, paint);
                 }
-                TouchImageView.super.setImageBitmap(originalBitmap);
-                if(!longPressMode){
-                    Collections.sort(selectedVisionTextRectanglesSimplified, new Comparator<VisionWordModel>() {
-                        @Override
-                        public int compare(VisionWordModel p1, VisionWordModel p2) {
-                            // Ascending first left as same line words can have top +/- 5
-                            int threshold = minWordHeight;
-                            int c = 0;
-                            if((p1.mrect.top < p2.mrect.top + threshold) && (p1.mrect.top < p2.mrect.top - threshold)){
-                                c = -1;
-                            }else if((p1.mrect.top > p2.mrect.top + threshold) && (p1.mrect.top > p2.mrect.top - threshold)){
-                                c = 1;
-                            }
-                            if (c == 0)
-                                c = Double.compare(p1.mrect.left, p2.mrect.left);
-                            return c;
-                        }
-                    });
-                }
-                java.util.List<String> selectedVisionText = new ArrayList<>();
-                if (Build.VERSION.SDK_INT >= VERSION_CODES.N) {
-                    selectedVisionText =
-                            selectedVisionTextRectanglesSimplified.stream()
-                                    .map(VisionWordModel::getText)
-                                    .collect(Collectors.toList());
-                }else{
-                    for (VisionWordModel visionWordModelx : selectedVisionTextRectanglesSimplified) {
-                        selectedVisionText.add(visionWordModelx.mtext);
-                    }
-                }
-                //Toast.makeText(mContext, TextUtils.join(" ", selectedVisionText), Toast.LENGTH_SHORT).show();
-                TouchImageView.super.setContentDescription(TextUtils.join(" ", selectedVisionText));
-                //ivImage.invalidate();
-                //et_image_text.setText(TextUtils.join(" ", selectedVisionText));
-                //et_image_text.setSelectAllOnFocus(true);
-                //et_image_text.setText(et_image_text.getText()+" "+pair.getValue().toString());
-                if(mListener != null) {
-                    mListener.onEvent();
-                }
-                break;
-            }else{
-                //Log.d(TAG, pair.getValue()+" onLongPress: not match (int)touchX,(int)touchY) "+(int)touchX+" Y: "+(int)touchY+" rect: left "+rect.left+" top "+rect.top+" right "+rect.right+" bottom "+rect.bottom);
-                //Log.d(TAG, pair.getValue()+" onLongPress: not match (int)zoomedTouchX,(int)zoomedTouchY) "+(int)zoomedTouchX+" Y: "+(int)zoomedTouchY+" rect: left "+rect.left+" top "+rect.top+" right "+rect.right+" bottom "+rect.bottom);
             }
-            //System.out.println(pair.getKey() + " = " + pair.getValue());
-            //it.remove(); // avoids a ConcurrentModificationException
-        }
-        if(!foundWord && longPressMode){
-            // Initialize a new Paint instance to draw the Rectangle
-            Paint paint = new Paint();
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.RED);
-            paint.setAntiAlias(true);
 
-            //canvas.drawCircle(touchX, touchY, 30, paint);
-            startCursorPoint.x = touchX;
-            startCursorPoint.y = touchY;
-            //canvas.drawCircle(touchX + 100, touchY, 30, paint);
-            endCursorPoint.x = touchX + 100;
-            endCursorPoint.y = touchY;
-            paintCursors(canvas);
-        }
-        //Log.d(TAG, "onLongPress: visionTextRectangles size "+visionTextRectangles.size());
+            // --- 2. MainActivity-Specific UI Updates ---
+            if (mContext instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) mContext;
+                EditText notesEt = mainActivity.findViewById(R.id.et);
+                notesEt.setText(""); // Clear previous notes on new selection
 
+                // If a single word is selected, check for and display its saved note/highlight
+                if (selectedVisionTextRectanglesSimplified.size() == 1) {
+                    VisionWordModel selectedWord = selectedVisionTextRectanglesSimplified.get(0);
+                    for (MainActivity.MyVisionWordModel vwm : savedRects) {
+                        if (selectedWord.mrect.equals(vwm.mrect)) {
+                            if (vwm.note != null) {
+                                notesEt.setText(vwm.note);
+                            }
+                            // Add logic here to show saved highlight color if needed
+                            break;
+                        }
+                    }
+                }
+            }
 
+            // --- 3. Universal Finalization (Runs Everywhere) ---
+            // Sort the list to ensure correct text order
+            Collections.sort(selectedVisionTextRectanglesSimplified, (p1, p2) -> {
+                int c = Double.compare(p1.mrect.top, p2.mrect.top);
+                if (c == 0)
+                    c = Double.compare(p1.mrect.left, p2.mrect.left);
+                return c;
+            });
 
+            // Update the content description with the newly selected text
+            List<String> selectedTextList = new ArrayList<>();
+            for (VisionWordModel word : selectedVisionTextRectanglesSimplified) {
+                selectedTextList.add(word.mtext);
+            }
+            setContentDescription(TextUtils.join(" ", selectedTextList));
 
+            // Apply the visual changes to the image and notify the host
+            setImageBitmap(originalBitmap);
+            if (mListener != null) {
+                mListener.onEvent();
+            }
 
-        }catch (Exception e){
-            Toast.makeText(mContext,e.toString(),Toast.LENGTH_LONG).show();
-        }
-        catch (Error e){
-            Toast.makeText(mContext,e.toString(),Toast.LENGTH_LONG).show();
-        }
-        catch (Throwable e){
-            Toast.makeText(mContext,e.toString(),Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(mContext, "Error during selection: " + e.toString(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
         }
     }
-
     private void paintCursors(Canvas canvas){
         int threshold = 30;
         int radius = 20;

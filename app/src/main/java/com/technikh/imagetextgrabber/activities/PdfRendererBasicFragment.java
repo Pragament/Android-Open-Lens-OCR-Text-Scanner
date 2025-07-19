@@ -36,6 +36,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.PagerAdapter;
@@ -43,6 +46,7 @@ import androidx.viewpager.widget.ViewPager;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.technikh.imagetextgrabber.R;
+import com.technikh.imagetextgrabber.models.ImageViewSettingsModel;
 import com.technikh.imagetextgrabber.room.entity.Highlights;
 import com.technikh.imagetextgrabber.widgets.TouchImageView;
 
@@ -112,6 +116,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
     private com.technikh.imagetextgrabber.room.dao.HighlightDataAccess markerDao;
     private com.technikh.imagetextgrabber.room.dao.ImagesDataAccess imagesDao;
     private ArrayList<String> colorArray;
+    private ImageViewSettingsModel imageViewSettingsModel;
 
     public PdfRendererBasicFragment() {
     }
@@ -155,8 +160,25 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
 
 
         android.os.Bundle args = getIntent().getBundleExtra("bundle");
-        if(args != null) {
+        if (args != null) {
             pdfFileUri = Uri.parse(args.getString("uri", ""));
+            android.util.Log.d(TAG, "onViewCreated: pdfFileUri " + pdfFileUri);
+
+            // Initialize settings model
+            imageViewSettingsModel = new ImageViewSettingsModel();
+            String settingsString = args.getString("settings", imageViewSettingsModel.getDefaultItemsString());
+
+            // Create settings list compatible with API 21
+            List<Integer> settingsList = new ArrayList<>();
+            String[] items = settingsString.split(",");
+            for (String item : items) {
+                try {
+                    settingsList.add(Integer.parseInt(item));
+                } catch (NumberFormatException e) {
+                    // Optional: Log an error if an item is not a valid number
+                }
+            }
+            imageViewSettingsModel.setSelectedItems(settingsList);
             android.util.Log.d(TAG, "onViewCreated: pdfFileUri " + pdfFileUri);
         }
 
@@ -245,10 +267,16 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
             android.database.Cursor cursor = mContext.getContentResolver().query(uri, null, null, null, null);
             try {
                 if (cursor != null && cursor.moveToFirst()) {
-                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                    // Safely get column index before using it
+                    int columnIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (columnIndex != -1) {
+                        result = cursor.getString(columnIndex);
+                    }
                 }
             } finally {
-                cursor.close();
+                if (cursor != null) {
+                    cursor.close();
+                }
             }
         }
         if (result == null) {
@@ -258,7 +286,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
                 result = result.substring(cut + 1);
             }
         }
-        android.util.Log.d(TAG, "getFileName: result "+result);
+        android.util.Log.d(TAG, "getFileName: result " + result);
         return result;
     }
 
@@ -383,10 +411,10 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
             collection.addView(layout);
 
             TouchImageView ivImage = layout.findViewById(R.id.ivImage);
+            if (imageViewSettingsModel != null) {
+                ivImage.initOptions(imageViewSettingsModel);
+            }
             showPage(position, ivImage);
-
-
-
             return layout;
         }
 
@@ -397,7 +425,7 @@ public class PdfRendererBasicFragment extends AppCompatActivity implements andro
 
         @Override
         public int getCount() {
-            return mPdfRenderer.getPageCount();
+            return (mPdfRenderer != null) ? mPdfRenderer.getPageCount() : 0;
         }
 
         @Override
